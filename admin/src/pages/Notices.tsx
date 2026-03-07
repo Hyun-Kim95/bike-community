@@ -9,6 +9,20 @@ interface Notice {
   createdAt: string
 }
 
+const pageTitle = 'text-2xl font-semibold text-foreground mb-4'
+const tableWrap = 'w-full border-collapse rounded-lg border border-border overflow-hidden'
+const tableHead = 'border-b border-border bg-muted/50 text-left text-sm font-medium text-foreground'
+const th = 'p-3'
+const tableBody = 'bg-card text-card-foreground'
+const td = 'p-3 border-b border-border'
+const inputBase = 'w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+const btn = 'py-2 px-3 rounded-md font-medium cursor-pointer transition-opacity disabled:opacity-60 disabled:cursor-not-allowed'
+const btnPrimary = 'bg-primary text-primary-foreground hover:opacity-90 ' + btn
+const btnSecondary = 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-border ' + btn
+const btnDestructive = 'bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-border ' + btn
+const modalOverlay = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]'
+const modalPanel = 'bg-card text-card-foreground p-6 rounded-lg shadow-lg border border-border min-w-[400px] max-w-[90%] max-h-[90vh] overflow-auto'
+
 export function Notices() {
   const [items, setItems] = useState<Notice[]>([])
   const [loading, setLoading] = useState(true)
@@ -99,31 +113,31 @@ export function Notices() {
 
   return (
     <div>
-      <h1>공지사항</h1>
-      <div style={{ marginBottom: 16 }}>
-        <button type="button" onClick={openCreate}>공지 등록</button>
+      <h1 className={pageTitle}>공지사항</h1>
+      <div className="mb-4">
+        <button type="button" className={btnPrimary} onClick={openCreate}>공지 등록</button>
       </div>
       {loading ? (
-        <div>로딩 중...</div>
+        <div className="text-muted-foreground">로딩 중...</div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #ddd' }}>
-              <th style={{ textAlign: 'left', padding: 8 }}>제목</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>고정</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>등록일</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>관리</th>
+        <table className={tableWrap}>
+          <thead className={tableHead}>
+            <tr>
+              <th className={th}>제목</th>
+              <th className={th}>고정</th>
+              <th className={th}>등록일</th>
+              <th className={th}>관리</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className={tableBody}>
             {items.map((n) => (
-              <tr key={n.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: 8 }}>{n.title}</td>
-                <td style={{ padding: 8 }}>{n.pinned ? 'Y' : ''}</td>
-                <td style={{ padding: 8 }}>{new Date(n.createdAt).toLocaleDateString()}</td>
-                <td style={{ padding: 8 }}>
-                  <button type="button" onClick={() => openEdit(n)} style={{ marginRight: 8 }}>수정</button>
-                  <button type="button" onClick={() => deleteNotice(n)}>삭제</button>
+              <tr key={n.id}>
+                <td className={td}>{n.title}</td>
+                <td className={td}>{n.pinned ? 'Y' : ''}</td>
+                <td className={td}>{new Date(n.createdAt).toLocaleDateString()}</td>
+                <td className={td}>
+                  <button type="button" className={`${btnSecondary} text-sm mr-2`} onClick={() => openEdit(n)}>수정</button>
+                  <button type="button" className={`${btnDestructive} text-sm`} onClick={() => deleteNotice(n)}>삭제</button>
                 </td>
               </tr>
             ))}
@@ -132,66 +146,27 @@ export function Notices() {
       )}
 
       {showModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={closeModal}
-        >
-          <div
-            style={{
-              background: '#fff',
-              padding: 24,
-              borderRadius: 8,
-              minWidth: 400,
-              maxWidth: '90%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ marginTop: 0 }}>{isCreate ? '공지 등록' : '공지 수정'}</h2>
-            {error && <p style={{ color: '#c00', marginBottom: 12 }}>{error}</p>}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', marginBottom: 4 }}>제목</label>
-              <input
-                type="text"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                style={{ width: '100%', padding: 8 }}
-                placeholder="제목"
-              />
+        <div className={modalOverlay} onClick={closeModal}>
+          <div className={modalPanel} onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold mt-0 mb-4">{isCreate ? '공지 등록' : '공지 수정'}</h2>
+            {error && <p className="text-destructive mb-3 text-sm">{error}</p>}
+            <div className="mb-3">
+              <label className="block mb-1 text-sm text-foreground">제목</label>
+              <input type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} className={inputBase} placeholder="제목" />
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', marginBottom: 4 }}>내용</label>
-              <textarea
-                value={formContent}
-                onChange={(e) => setFormContent(e.target.value)}
-                style={{ width: '100%', padding: 8, minHeight: 120 }}
-                placeholder="내용"
-              />
+            <div className="mb-3">
+              <label className="block mb-1 text-sm text-foreground">내용</label>
+              <textarea value={formContent} onChange={(e) => setFormContent(e.target.value)} className={`${inputBase} min-h-[120px]`} placeholder="내용" />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={formPinned}
-                  onChange={(e) => setFormPinned(e.target.checked)}
-                />
-                {' '}상단 고정
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer text-foreground">
+                <input type="checkbox" checked={formPinned} onChange={(e) => setFormPinned(e.target.checked)} className="rounded border-input" />
+                상단 고정
               </label>
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={closeModal} disabled={saving}>취소</button>
-              <button type="button" onClick={saveNotice} disabled={saving}>
-                {saving ? '저장 중...' : '저장'}
-              </button>
+            <div className="flex gap-2 justify-end">
+              <button type="button" className={btnSecondary} onClick={closeModal} disabled={saving}>취소</button>
+              <button type="button" className={btnPrimary} onClick={saveNotice} disabled={saving}>{saving ? '저장 중...' : '저장'}</button>
             </div>
           </div>
         </div>

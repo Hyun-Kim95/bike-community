@@ -11,13 +11,17 @@ export function Dashboard() {
       .catch((err) => setError(err instanceof Error ? err.message : '로딩 실패'))
   }, [])
 
-  if (error) return <div style={{ color: '#c00' }}>{error}</div>
-  if (!stats) return <div>로딩 중...</div>
+  if (error) {
+    return <div className="text-destructive">{error}</div>
+  }
+  if (!stats) {
+    return <div className="text-muted-foreground">로딩 중...</div>
+  }
 
   return (
     <div>
-      <h1>대시보드</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginTop: 24 }}>
+      <h1 className="text-2xl font-semibold text-foreground mb-2">대시보드</h1>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 mt-6">
         <StatCard label="전체 회원" value={stats.totalUsers} />
         <StatCard label="오늘 신규" value={stats.newUsersToday} />
         <StatCard label="게시글" value={stats.postsTotal} />
@@ -33,15 +37,14 @@ export function Dashboard() {
 function StatCard({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div
-      style={{
-        padding: 20,
-        background: highlight ? '#fff3cd' : '#fff',
-        border: '1px solid #eee',
-        borderRadius: 8,
-      }}
+      className={`p-5 rounded-lg border transition-colors ${
+        highlight
+          ? 'bg-secondary/30 border-secondary text-secondary-foreground'
+          : 'bg-card text-card-foreground border-border'
+      }`}
     >
-      <div style={{ fontSize: '0.9rem', color: '#666' }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: 4 }}>{value.toLocaleString()}</div>
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="text-2xl font-bold mt-1 text-foreground">{value.toLocaleString()}</div>
     </div>
   )
 }

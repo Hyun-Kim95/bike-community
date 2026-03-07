@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/theme/theme_mode_provider.dart';
 import 'auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -36,7 +37,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<ThemeModeProvider>();
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: Icon(themeMode.isDark ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () => context.read<ThemeModeProvider>().toggle(),
+            tooltip: themeMode.isDark ? '라이트 모드' : '다크 모드',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -51,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Bike Community',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                     textAlign: TextAlign.center,
                   ),

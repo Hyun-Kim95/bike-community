@@ -10,6 +10,16 @@ interface Post {
   author?: { id: string; nickname: string }
 }
 
+const pageTitle = 'text-2xl font-semibold text-foreground mb-4'
+const tableWrap = 'w-full border-collapse rounded-lg border border-border overflow-hidden'
+const tableHead = 'border-b border-border bg-muted/50 text-left text-sm font-medium text-foreground'
+const th = 'p-3'
+const tableBody = 'bg-card text-card-foreground'
+const td = 'p-3 border-b border-border'
+const inputBase = 'w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+const btn = 'py-2 px-3 rounded-md font-medium cursor-pointer transition-opacity disabled:opacity-60 disabled:cursor-not-allowed'
+const btnDestructive = 'bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-border ' + btn
+
 export function Posts() {
   const [items, setItems] = useState<Post[]>([])
   const [total, setTotal] = useState(0)
@@ -48,54 +58,54 @@ export function Posts() {
 
   return (
     <div>
-      <h1>게시글 관리</h1>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+      <h1 className={pageTitle}>게시글 관리</h1>
+      <div className="mb-4 flex gap-2 items-center">
         <input
           type="text"
           placeholder="카테고리 필터"
           value={category}
           onChange={(e) => { setCategory(e.target.value); setPage(1) }}
-          style={{ padding: 8, width: 160 }}
+          className={`${inputBase} w-40`}
         />
       </div>
       {loading ? (
-        <div>로딩 중...</div>
+        <div className="text-muted-foreground">로딩 중...</div>
       ) : (
         <>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #ddd' }}>
-                <th style={{ textAlign: 'left', padding: 8 }}>제목</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>작성자</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>카테고리</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>작성일</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>관리</th>
+          <table className={tableWrap}>
+            <thead className={tableHead}>
+              <tr>
+                <th className={th}>제목</th>
+                <th className={th}>작성자</th>
+                <th className={th}>카테고리</th>
+                <th className={th}>작성일</th>
+                <th className={th}>관리</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className={tableBody}>
               {items.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: 8, maxWidth: 280 }} title={p.title}>
+                <tr key={p.id}>
+                  <td className={`${td} max-w-[280px]`} title={p.title}>
                     {p.title.length > 40 ? `${p.title.slice(0, 40)}...` : p.title}
                   </td>
-                  <td style={{ padding: 8 }}>{p.author?.nickname ?? '-'}</td>
-                  <td style={{ padding: 8 }}>{p.category}</td>
-                  <td style={{ padding: 8 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
-                  <td style={{ padding: 8 }}>
-                    <button type="button" onClick={() => deletePost(p)}>삭제</button>
+                  <td className={td}>{p.author?.nickname ?? '-'}</td>
+                  <td className={td}>{p.category}</td>
+                  <td className={td}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                  <td className={td}>
+                    <button type="button" className={`${btnDestructive} text-sm`} onClick={() => deletePost(p)}>삭제</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p style={{ marginTop: 16 }}>
+          <p className="mt-4 text-muted-foreground">
             총 {total}건
             {totalPages > 1 && (
               <>
                 {' · '}
-                <button type="button" onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>이전</button>
+                <button type="button" className={btn + ' text-primary'} onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>이전</button>
                 {' '}{page} / {totalPages}{' '}
-                <button type="button" onClick={() => setPage((x) => Math.min(totalPages, x + 1))} disabled={page >= totalPages}>다음</button>
+                <button type="button" className={btn + ' text-primary'} onClick={() => setPage((x) => Math.min(totalPages, x + 1))} disabled={page >= totalPages}>다음</button>
               </>
             )}
           </p>

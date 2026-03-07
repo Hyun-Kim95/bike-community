@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../config/env.dart';
+import '../theme/theme_mode_provider.dart';
 import '../../features/auth/presentation/auth_provider.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/profile_edit_screen.dart';
@@ -120,10 +121,16 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final themeMode = context.watch<ThemeModeProvider>();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bike Community'),
         actions: [
+          IconButton(
+            icon: Icon(themeMode.isDark ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () => context.read<ThemeModeProvider>().toggle(),
+            tooltip: themeMode.isDark ? '라이트 모드' : '다크 모드',
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () => context.push('/profile/edit'),

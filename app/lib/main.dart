@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_provider.dart';
 import 'core/network/api_client.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/data/auth_repository.dart';
@@ -28,9 +30,13 @@ void main() {
   final notificationsRepository = NotificationsRepository(apiClient: apiClient);
   final router = createAppRouter(authProvider);
 
+  final themeModeProvider = ThemeModeProvider();
+  themeModeProvider.load();
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider<ThemeModeProvider>.value(value: themeModeProvider),
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         Provider<CommunityRepository>.value(value: communityRepository),
         Provider<ReportsRepository>.value(value: reportsRepository),
@@ -40,13 +46,14 @@ void main() {
         Provider<NoticesRepository>.value(value: noticesRepository),
         Provider<NotificationsRepository>.value(value: notificationsRepository),
       ],
-      child: MaterialApp.router(
-        title: 'Bike Community',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-          useMaterial3: true,
+      child: Consumer<ThemeModeProvider>(
+        builder: (context, themeMode, _) => MaterialApp.router(
+          title: 'Bike Community',
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: themeMode.themeMode,
+          routerConfig: router,
         ),
-        routerConfig: router,
       ),
     ),
   );

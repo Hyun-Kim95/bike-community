@@ -12,6 +12,19 @@ interface User {
 
 const STATUS_OPTIONS = ['normal', 'suspended', 'withdrawn', 'dormant'] as const
 
+const pageTitle = 'text-2xl font-semibold text-foreground mb-4'
+const tableWrap = 'w-full border-collapse rounded-lg border border-border overflow-hidden'
+const tableHead = 'border-b border-border bg-muted/50 text-left text-sm font-medium text-foreground'
+const th = 'p-3'
+const tableBody = 'bg-card text-card-foreground'
+const td = 'p-3 border-b border-border'
+const inputBase = 'w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+const btn = 'py-2 px-3 rounded-md font-medium cursor-pointer transition-opacity disabled:opacity-60 disabled:cursor-not-allowed'
+const btnPrimary = 'bg-primary text-primary-foreground hover:opacity-90 ' + btn
+const btnSecondary = 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-border ' + btn
+const modalOverlay = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]'
+const modalPanel = 'bg-card text-card-foreground p-6 rounded-lg shadow-lg border border-border min-w-[320px] max-w-[90%]'
+
 export function Users() {
   const [items, setItems] = useState<User[]>([])
   const [total, setTotal] = useState(0)
@@ -73,110 +86,72 @@ export function Users() {
 
   return (
     <div>
-      <h1>회원 관리</h1>
+      <h1 className={pageTitle}>회원 관리</h1>
       <input
         type="search"
         placeholder="이메일/닉네임 검색"
         value={search}
         onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-        style={{ marginBottom: 16, padding: 8, width: 240 }}
+        className={`${inputBase} mb-4 w-60`}
       />
       {loading ? (
-        <div>로딩 중...</div>
+        <div className="text-muted-foreground">로딩 중...</div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #ddd' }}>
-              <th style={{ textAlign: 'left', padding: 8 }}>이메일</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>닉네임</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>상태</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>등급</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>포인트</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>가입일</th>
-              <th style={{ textAlign: 'left', padding: 8 }}>관리</th>
+        <table className={tableWrap}>
+          <thead className={tableHead}>
+            <tr>
+              <th className={th}>이메일</th>
+              <th className={th}>닉네임</th>
+              <th className={th}>상태</th>
+              <th className={th}>등급</th>
+              <th className={th}>포인트</th>
+              <th className={th}>가입일</th>
+              <th className={th}>관리</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className={tableBody}>
             {items.map((u) => (
-              <tr key={u.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: 8 }}>{u.email}</td>
-                <td style={{ padding: 8 }}>{u.nickname}</td>
-                <td style={{ padding: 8 }}>{u.status}</td>
-                <td style={{ padding: 8 }}>{u.profile?.gradeName ?? '-'}</td>
-                <td style={{ padding: 8 }}>{u.profile?.totalPoints ?? 0}</td>
-                <td style={{ padding: 8 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                <td style={{ padding: 8 }}>
-                  <button type="button" onClick={() => openEdit(u)}>수정</button>
+              <tr key={u.id}>
+                <td className={td}>{u.email}</td>
+                <td className={td}>{u.nickname}</td>
+                <td className={td}>{u.status}</td>
+                <td className={td}>{u.profile?.gradeName ?? '-'}</td>
+                <td className={td}>{u.profile?.totalPoints ?? 0}</td>
+                <td className={td}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td className={td}>
+                  <button type="button" className={`${btnSecondary} text-sm`} onClick={() => openEdit(u)}>수정</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      <p style={{ marginTop: 16 }}>총 {total}명</p>
+      <p className="mt-4 text-muted-foreground">총 {total}명</p>
 
       {editUser && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => !saving && setEditUser(null)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              padding: 24,
-              borderRadius: 8,
-              minWidth: 320,
-              maxWidth: '90%',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ marginTop: 0 }}>회원 수정: {editUser.nickname}</h2>
-            {error && <p style={{ color: '#c00', marginBottom: 12 }}>{error}</p>}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', marginBottom: 4 }}>상태</label>
-              <select
-                value={editStatus}
-                onChange={(e) => setEditStatus(e.target.value)}
-                style={{ width: '100%', padding: 8 }}
-              >
+        <div className={modalOverlay} onClick={() => !saving && setEditUser(null)}>
+          <div className={modalPanel} onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold mt-0 mb-4">회원 수정: {editUser.nickname}</h2>
+            {error && <p className="text-destructive mb-3 text-sm">{error}</p>}
+            <div className="mb-3">
+              <label className="block mb-1 text-sm text-foreground">상태</label>
+              <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className={inputBase}>
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', marginBottom: 4 }}>등급명</label>
-              <input
-                type="text"
-                value={editGradeName}
-                onChange={(e) => setEditGradeName(e.target.value)}
-                style={{ width: '100%', padding: 8 }}
-                placeholder="예: 새싹 라이더"
-              />
+            <div className="mb-3">
+              <label className="block mb-1 text-sm text-foreground">등급명</label>
+              <input type="text" value={editGradeName} onChange={(e) => setEditGradeName(e.target.value)} className={inputBase} placeholder="예: 새싹 라이더" />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', marginBottom: 4 }}>포인트</label>
-              <input
-                type="number"
-                value={editTotalPoints}
-                onChange={(e) => setEditTotalPoints(Number(e.target.value) || 0)}
-                style={{ width: '100%', padding: 8 }}
-                min={0}
-              />
+            <div className="mb-4">
+              <label className="block mb-1 text-sm text-foreground">포인트</label>
+              <input type="number" value={editTotalPoints} onChange={(e) => setEditTotalPoints(Number(e.target.value) || 0)} className={inputBase} min={0} />
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setEditUser(null)} disabled={saving}>취소</button>
-              <button type="button" onClick={saveEdit} disabled={saving}>
-                {saving ? '저장 중...' : '저장'}
-              </button>
+            <div className="flex gap-2 justify-end">
+              <button type="button" className={btnSecondary} onClick={() => setEditUser(null)} disabled={saving}>취소</button>
+              <button type="button" className={btnPrimary} onClick={saveEdit} disabled={saving}>{saving ? '저장 중...' : '저장'}</button>
             </div>
           </div>
         </div>
