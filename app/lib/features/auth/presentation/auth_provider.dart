@@ -105,6 +105,48 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 서버에서 최신 사용자 정보를 가져와 반영 (프로필 수정 화면 로드 시)
+  Future<AuthUser?> getMe() async {
+    try {
+      final u = await _repository.getMe();
+      if (u != null) {
+        _user = u;
+        notifyListeners();
+      }
+      return u;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 프로필 수정 저장. repository에서 storage까지 갱신함
+  Future<bool> updateProfile({
+    String? nickname,
+    String? avatarUrl,
+    String? bio,
+    List<String>? interestCategories,
+    String? region,
+  }) async {
+    _error = null;
+    try {
+      final u = await _repository.updateProfile(
+        nickname: nickname,
+        avatarUrl: avatarUrl,
+        bio: bio,
+        interestCategories: interestCategories,
+        region: region,
+      );
+      if (u == null) return false;
+      _user = u;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = _errorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

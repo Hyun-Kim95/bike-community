@@ -170,6 +170,63 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(post.content),
+                  if (post.imageUrls != null && post.imageUrls!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 120,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: post.imageUrls!.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final url = post.imageUrls![i];
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              url,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 120,
+                                height: 120,
+                                color: Colors.grey.shade300,
+                                child: const Icon(Icons.broken_image),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  if (post.videoUrl != null && post.videoUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () {
+                        // url_launcher 사용 시: launchUrl(Uri.parse(post.videoUrl!));
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.videocam, color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '동영상: ${post.videoUrl!.length > 40 ? '${post.videoUrl!.substring(0, 40)}...' : post.videoUrl}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     children: [

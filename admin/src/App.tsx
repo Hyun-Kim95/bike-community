@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Users } from './pages/Users'
 import { Reports } from './pages/Reports'
 import { Notices } from './pages/Notices'
+import { Posts } from './pages/Posts'
 
 function App() {
   return (
@@ -47,6 +48,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Notices />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/posts"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Posts />
             </Layout>
           </ProtectedRoute>
         }

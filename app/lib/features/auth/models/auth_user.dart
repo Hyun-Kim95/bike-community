@@ -18,11 +18,7 @@ class AuthUser {
         'email': email,
         'nickname': nickname,
         'status': status,
-        'profile': {
-          'avatarUrl': profile.avatarUrl,
-          'gradeName': profile.gradeName,
-          'totalPoints': profile.totalPoints,
-        },
+        'profile': profile.toJson(),
       };
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -42,20 +38,43 @@ class AuthUserProfile {
   final String? avatarUrl;
   final String gradeName;
   final int totalPoints;
+  final String? bio;
+  final String? region;
+  final List<String>? interestCategories;
 
   const AuthUserProfile({
     this.avatarUrl,
     required this.gradeName,
     required this.totalPoints,
+    this.bio,
+    this.region,
+    this.interestCategories,
   });
 
   factory AuthUserProfile.fromJson(Map<String, dynamic> json) {
+    List<String>? categories;
+    final raw = json['interestCategories'];
+    if (raw is List) {
+      categories = raw.map((e) => e.toString()).toList();
+    }
     return AuthUserProfile(
       avatarUrl: json['avatarUrl'] as String?,
       gradeName: json['gradeName'] as String? ?? '새싹 라이더',
       totalPoints: json['totalPoints'] as int? ?? 0,
+      bio: json['bio'] as String?,
+      region: json['region'] as String?,
+      interestCategories: categories,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'avatarUrl': avatarUrl,
+        'gradeName': gradeName,
+        'totalPoints': totalPoints,
+        if (bio != null) 'bio': bio,
+        if (region != null) 'region': region,
+        if (interestCategories != null) 'interestCategories': interestCategories,
+      };
 }
 
 class AuthResult {

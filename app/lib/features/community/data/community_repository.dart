@@ -38,13 +38,15 @@ class CommunityRepository {
     required String content,
     required String category,
     List<String>? imageUrls,
+    String? videoUrl,
   }) async {
     final data = <String, dynamic>{
       'title': title,
       'content': content,
       'category': category,
     };
-    if (imageUrls != null) data['imageUrls'] = imageUrls;
+    if (imageUrls != null && imageUrls.isNotEmpty) data['imageUrls'] = imageUrls;
+    if (videoUrl != null && videoUrl.isNotEmpty) data['videoUrl'] = videoUrl;
     final res = await _api.post<Map<String, dynamic>>('/posts', data: data);
     return Post.fromJson(res.data ?? {});
   }

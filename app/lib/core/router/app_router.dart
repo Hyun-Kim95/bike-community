@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../config/env.dart';
 import '../../features/auth/presentation/auth_provider.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/profile_edit_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/community/presentation/feed_screen.dart';
 import '../../features/community/presentation/post_detail_screen.dart';
@@ -44,6 +45,10 @@ GoRouter createAppRouter(ChangeNotifier authProvider) {
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const ProfileEditScreen(),
       ),
       GoRoute(
         path: '/feed',
@@ -120,6 +125,11 @@ class HomeScreen extends StatelessWidget {
         title: const Text('Bike Community'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () => context.push('/profile/edit'),
+            tooltip: '프로필 수정',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await auth.logout();
@@ -138,6 +148,12 @@ class HomeScreen extends StatelessWidget {
               Text(
                 '등급: ${auth.user!.profile.gradeName} | 포인트: ${auth.user!.profile.totalPoints}',
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/profile/edit'),
+                icon: const Icon(Icons.edit),
+                label: const Text('프로필 수정'),
               ),
             ] else
               const Text('자전거 커뮤니티 & 중고 거래'),

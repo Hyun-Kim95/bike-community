@@ -38,6 +38,7 @@ export function Layout({ children }: LayoutProps) {
           <Link to="/" style={navLink}>대시보드</Link>
           <Link to="/users" style={navLink}>회원 관리</Link>
           <Link to="/reports" style={navLink}>신고 처리</Link>
+          <Link to="/posts" style={navLink}>게시글 관리</Link>
           <Link to="/notices" style={navLink}>공지사항</Link>
         </nav>
         <button

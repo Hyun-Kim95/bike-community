@@ -131,9 +131,39 @@ class _FeedScreenState extends State<FeedScreen> {
                     );
                   }
                   final post = _items[index];
+                  final hasMedia = (post.imageUrls != null && post.imageUrls!.isNotEmpty) ||
+                      (post.videoUrl != null && post.videoUrl!.isNotEmpty);
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: ListTile(
+                      leading: hasMedia && post.imageUrls != null && post.imageUrls!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                post.imageUrls!.first,
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox(
+                                  width: 56,
+                                  height: 56,
+                                  child: ColoredBox(
+                                    color: Colors.grey,
+                                    child: Icon(Icons.image_not_supported, size: 28),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : (post.videoUrl != null && post.videoUrl!.isNotEmpty)
+                              ? const SizedBox(
+                                  width: 56,
+                                  height: 56,
+                                  child: ColoredBox(
+                                    color: Colors.grey,
+                                    child: Icon(Icons.videocam, size: 28),
+                                  ),
+                                )
+                              : null,
                       title: Text(
                         post.title,
                         maxLines: 2,

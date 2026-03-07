@@ -15,6 +15,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  final _videoUrlController = TextEditingController();
+  final List<TextEditingController> _imageUrlControllers = [
+    TextEditingController(),
+    TextEditingController(),
+    TextEditingController(),
+  ];
   String? _category;
   List<String> _categories = [];
   bool _loading = false;
@@ -30,6 +36,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _videoUrlController.dispose();
+    for (final c in _imageUrlControllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -58,10 +68,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     });
     try {
       final repo = context.read<CommunityRepository>();
+      final imageUrls = _imageUrlControllers
+          .map((c) => c.text.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      final videoUrl = _videoUrlController.text.trim();
       final post = await repo.createPost(
         title: _titleController.text.trim(),
         content: _contentController.text.trim(),
         category: _category!,
+        imageUrls: imageUrls.isEmpty ? null : imageUrls,
+        videoUrl: videoUrl.isEmpty ? null : videoUrl,
       );
       if (mounted) context.go('/posts/${post.id}');
     } catch (e) {
@@ -126,6 +143,31 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 if (v == null || v.trim().isEmpty) return '내용을 입력하세요.';
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+            const Text('이미지 URL (선택, 최대 3개)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 4),
+            ..._imageUrlControllers.asMap().entries.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: TextFormField(
+                    controller: e.value,
+                    decoration: InputDecoration(
+                      labelText: '이미지 ${e.key + 1}',
+                      border: const OutlineInputBorder(),
+                      hintText: 'https://...',
+                    ),
+                    keyboardType: TextInputType.url,
+                  ),
+                )),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _videoUrlController,
+              decoration: const InputDecoration(
+                labelText: '동영상 URL (선택)',
+                border: OutlineInputBorder(),
+                hintText: 'https://...',
+              ),
+              keyboardType: TextInputType.url,
             ),
           ],
         ),
