@@ -1,0 +1,86 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build / dist
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment (backend/, admin/ 등 모든 .env 제외)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test
+coverage/
+.nyc_output/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+*.iml
+.pub-cache/
+.pub/
+
+# Android / iOS (app/ 아래 경로)
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.keystore
+*.jks
+**/key.properties
+app/android/.gradle/
+app/android/.kotlin/
+app/android/app/debug/
+app/android/app/profile/
+app/android/app/release/
+app/android/build/
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+**/xcuserdata/
+app/build/
+
+# Uploads / temp
+uploads/
+tmp/
+temp/
+*.tmp
+
+# Vite (admin)
+.vite/
+
+# Cache
+.cache/
+
+# Misc
+*.pem
+.vercel
+.env.backup
+*.env.backup
