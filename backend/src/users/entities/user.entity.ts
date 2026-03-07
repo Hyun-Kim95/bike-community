@@ -29,7 +29,7 @@ export class User extends BaseEntity {
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.NORMAL })
   status: UserStatus;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastLoginAt: Date | null;
 
   @OneToOne(() => UserProfile, (profile) => profile.user, { cascade: true })

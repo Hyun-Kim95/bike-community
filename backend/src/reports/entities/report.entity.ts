@@ -33,7 +33,7 @@ export class Report extends BaseEntity {
   @Column({ type: 'uuid' })
   targetId: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   reason: string | null;
 
   @Column({ type: 'text', nullable: true })

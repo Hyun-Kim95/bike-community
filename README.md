@@ -13,7 +13,7 @@
 - Node.js 18+
 - PostgreSQL 14+
 - Flutter 3.x (앱 빌드 시)
-- pnpm 또는 npm
+- npm
 
 ## 로컬 실행
 
@@ -32,8 +32,8 @@ npm run start:dev
 
 ```bash
 cd admin
-pnpm install
-pnpm run dev
+npm install
+npm run dev
 ```
 
 ### 앱
@@ -44,15 +44,30 @@ flutter pub get
 flutter run
 ```
 
+**에뮬레이터/실기기에서 Connection refused 나올 때**  
+앱이 돌아가는 기기에서 `localhost`는 PC가 아니라 기기 자신이라, 백엔드(PC의 3000 포트)에 연결되지 않습니다. 아래처럼 API 주소를 지정해서 실행하세요.
+
+- **Android 에뮬레이터**: PC 쪽 주소는 `10.0.2.2`
+  ```bash
+  flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
+  ```
+- **실기기**: PC의 IP로 변경 (예: `192.168.0.10`)
+  ```bash
+  flutter run --dart-define=API_BASE_URL=http://192.168.0.10:3000/api/v1
+  ```
+
+(같은 PC에서 Chrome/Windows로 실행할 때는 `localhost:3000` 그대로 써도 됩니다.)
+
 ## 관리자(Admin)
 
-1. 백엔드: 초기 관리자 생성
+1. 백엔드: 초기 관리자 생성  
+   `backend/.env`에 `ADMIN_INIT_EMAIL`, `ADMIN_INIT_PASSWORD`를 넣은 뒤:
    ```bash
    cd backend
-   ADMIN_INIT_EMAIL=admin@bike.local ADMIN_INIT_PASSWORD=admin1234! npm run seed:admin
+   npm run seed:admin
    ```
 2. Admin 웹 실행: `cd admin && npm run dev`
-3. http://localhost:5174 접속 → 로그인 (admin@bike.local / admin1234!)
+3. http://localhost:5174 접속 → 로그인 (`.env`에 넣은 이메일/비밀번호)
 
 ## 브랜치 전략
 

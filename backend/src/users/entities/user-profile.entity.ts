@@ -11,7 +11,7 @@ export class UserProfile extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string | null;
 
   @Column({ type: 'text', nullable: true })
@@ -20,10 +20,10 @@ export class UserProfile extends BaseEntity {
   @Column({ type: 'simple-array', nullable: true })
   interestCategories: string[] | null;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   region: string | null;
 
-  @Column({ length: 50, default: '새싹 라이더' })
+  @Column({ type: 'varchar', length: 50, default: '새싹 라이더' })
   gradeName: string;
 
   @Column({ type: 'int', default: 0 })

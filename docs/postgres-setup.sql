@@ -4,6 +4,7 @@
 -- (1) postgres 슈퍼유저로 접속 후 "1. 데이터베이스 & 유저" 블록만 실행
 -- (2) \c bike_community 로 DB 접속 후 "2. 테이블 생성" 블록 실행
 -- (3) 같은 DB에서 "3. 앱 유저 권한" 블록 실행
+-- (4) 같은 DB에서 "4. 테이블 소유자를 bike_app으로 변경" 블록 실행 (백엔드 TypeORM synchronize 사용 시 필수)
 --
 -- 또는 psql에서:
 --   psql -U postgres -f postgres-setup.sql  (전체 한 번에 하려면 DB 생성 후 수동으로 \c 필요)
@@ -305,3 +306,32 @@ CREATE INDEX idx_admin_users_email ON admin_users(email);
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO bike_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO bike_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bike_app;
+
+
+-- ============================================================
+-- 4. 테이블 소유자를 bike_app으로 변경 (postgres로 실행)
+--    TypeORM synchronize 사용 시 필요. 이미 테이블 생성한 뒤 한 번만 실행.
+-- ============================================================
+
+ALTER TABLE users OWNER TO bike_app;
+ALTER TABLE user_profiles OWNER TO bike_app;
+ALTER TABLE posts OWNER TO bike_app;
+ALTER TABLE comments OWNER TO bike_app;
+ALTER TABLE likes OWNER TO bike_app;
+ALTER TABLE marketplace_items OWNER TO bike_app;
+ALTER TABLE wishes OWNER TO bike_app;
+ALTER TABLE trade_chat_rooms OWNER TO bike_app;
+ALTER TABLE trade_messages OWNER TO bike_app;
+ALTER TABLE reviews OWNER TO bike_app;
+ALTER TABLE point_histories OWNER TO bike_app;
+ALTER TABLE attendances OWNER TO bike_app;
+ALTER TABLE reports OWNER TO bike_app;
+ALTER TABLE notices OWNER TO bike_app;
+ALTER TABLE notifications OWNER TO bike_app;
+ALTER TABLE admin_users OWNER TO bike_app;
+
+-- enum 타입 소유자도 변경 (synchronize 시 타입 변경 시 필요)
+ALTER TYPE user_status_enum OWNER TO bike_app;
+ALTER TYPE sale_status_enum OWNER TO bike_app;
+ALTER TYPE report_target_type_enum OWNER TO bike_app;
+ALTER TYPE report_status_enum OWNER TO bike_app;

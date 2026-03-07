@@ -34,7 +34,7 @@ export class Post extends BaseEntity {
   @Column({ type: 'simple-array', nullable: true })
   imageUrls: string[] | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   videoUrl: string | null;
 
   @Column({ type: 'int', default: 0 })

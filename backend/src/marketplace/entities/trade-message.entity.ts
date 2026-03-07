@@ -23,7 +23,7 @@ export class TradeMessage extends BaseEntity {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   imageUrl: string | null;
 
   @Column({ type: 'boolean', default: false })
