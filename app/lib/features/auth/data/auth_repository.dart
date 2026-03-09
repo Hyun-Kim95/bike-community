@@ -1,6 +1,41 @@
+import 'package:dio/dio.dart';
+
+import '../../../core/config/env.dart';
 import '../../../core/network/api_client.dart';
 import '../models/auth_user.dart';
 import 'auth_storage.dart';
+
+/// 리프레시 토큰으로 액세스 토큰 갱신. ApiClient 401 재시도용(순환 의존 방지).
+Future<String?> refreshAccessToken(AuthStorage storage) async {
+  final refreshToken = await storage.getRefreshToken();
+  if (refreshToken == null || refreshToken.isEmpty) return null;
+  final dio = Dio(BaseOptions(
+    baseUrl: Env.apiBaseUrl,
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(seconds: 15),
+    headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+  ));
+  try {
+    final res = await dio.post<Map<String, dynamic>>(
+      '/auth/refresh',
+      data: {'refreshToken': refreshToken},
+    );
+    if (res.data == null) return null;
+    final result = AuthResult.fromJson(res.data!);
+    await storage.setTokens(result.accessToken, result.refreshToken);
+    await storage.setUser(result.user);
+    return result.accessToken;
+  } on DioException catch (e) {
+    // 리프레시 토큰이 진짜 만료/무효(401)일 때만 완전히 로그아웃
+    if (e.response?.statusCode == 401) {
+      await storage.clear();
+    }
+    // 네트워크 오류 등 다른 경우에는 토큰은 유지하되, 이번 요청만 실패 처리
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
 
 class AuthRepository {
   AuthRepository({
@@ -12,7 +47,7 @@ class AuthRepository {
   final ApiClient _api;
   final AuthStorage _storage;
 
-  Future<AuthResult?> login(String email, String password) async {
+  Future<AuthResult?> login(String email, String password, {bool autoLogin = true}) async {
     final res = await _api.post<Map<String, dynamic>>(
       '/auth/login',
       data: {'email': email, 'password': password},
@@ -21,6 +56,11 @@ class AuthRepository {
     final result = AuthResult.fromJson(res.data!);
     await _storage.setTokens(result.accessToken, result.refreshToken);
     await _storage.setUser(result.user);
+    await _storage.setAutoLogin(autoLogin);
+    await _storage.setLastEmail(email);
+    if (autoLogin) {
+      await _storage.setLastPassword(password);
+    }
     return result;
   }
 
@@ -52,6 +92,12 @@ class AuthRepository {
   Future<String?> getAccessToken() async => _storage.getAccessToken();
 
   Future<AuthUser?> getStoredUser() async => _storage.getStoredUser();
+
+  Future<String?> getLastEmail() async => _storage.getLastEmail();
+
+  Future<String?> getLastPassword() async => _storage.getLastPassword();
+
+  Future<bool> getAutoLogin() async => _storage.getAutoLogin();
 
   Future<void> logout() async => _storage.clear();
 

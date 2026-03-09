@@ -8,6 +8,9 @@ export interface DashboardStats {
   itemsTotal: number
   reportsPending: number
   pointSum: number
+  usersByDay: { date: string; count: number }[]
+  postsByDay: { date: string; count: number }[]
+  pointsByDay: { date: string; amount: number }[]
 }
 
 export async function getDashboard(): Promise<DashboardStats> {

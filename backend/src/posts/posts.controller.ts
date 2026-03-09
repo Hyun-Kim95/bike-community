@@ -42,6 +42,18 @@ export class PostsController {
     return this.postsService.findAll(query);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async findMyPosts(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const p = page ? parseInt(page, 10) : 1;
+    const l = limit ? Math.min(parseInt(limit, 10), 50) : 20;
+    return this.postsService.findByAuthor(user.id, p, l);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.postsService.findOne(id);

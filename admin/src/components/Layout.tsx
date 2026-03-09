@@ -27,7 +27,7 @@ export function Layout({ children }: LayoutProps) {
             to="/"
             className="block py-2 px-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           >
-            대시보드
+            통계
           </Link>
           <Link
             to="/users"
@@ -52,6 +52,18 @@ export function Layout({ children }: LayoutProps) {
             className="block py-2 px-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           >
             공지사항
+          </Link>
+          <Link
+            to="/grades"
+            className="block py-2 px-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          >
+            등급 관리
+          </Link>
+          <Link
+            to="/points"
+            className="block py-2 px-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          >
+            포인트 관리
           </Link>
         </nav>
         <button

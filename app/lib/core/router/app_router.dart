@@ -8,6 +8,7 @@ import '../../features/auth/presentation/auth_provider.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/profile_edit_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/auth/presentation/my_page_screen.dart';
 import '../../features/community/presentation/feed_screen.dart';
 import '../../features/community/presentation/post_detail_screen.dart';
 import '../../features/community/presentation/create_post_screen.dart';
@@ -37,7 +38,7 @@ GoRouter createAppRouter(ChangeNotifier authProvider) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const HomeWrapper(),
       ),
       GoRoute(
         path: '/login',
@@ -48,68 +49,86 @@ GoRouter createAppRouter(ChangeNotifier authProvider) {
         builder: (context, state) => const SignupScreen(),
       ),
       GoRoute(
+        path: '/me',
+        builder: (context, state) => const BackToHomeWrapper(child: MyPageScreen()),
+      ),
+      GoRoute(
         path: '/profile/edit',
-        builder: (context, state) => const ProfileEditScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: ProfileEditScreen()),
       ),
       GoRoute(
         path: '/feed',
-        builder: (context, state) => const FeedScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: FeedScreen()),
       ),
       GoRoute(
         path: '/posts/create',
-        builder: (context, state) => const CreatePostScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: CreatePostScreen()),
+      ),
+      GoRoute(
+        path: '/posts/:id/edit',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return BackToHomeWrapper(child: CreatePostScreen(postId: id));
+        },
       ),
       GoRoute(
         path: '/posts/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return PostDetailScreen(postId: id);
+          return BackToHomeWrapper(child: PostDetailScreen(postId: id));
         },
       ),
       GoRoute(
         path: '/marketplace',
-        builder: (context, state) => const MarketplaceListScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: MarketplaceListScreen()),
       ),
       GoRoute(
         path: '/marketplace/create',
-        builder: (context, state) => const MarketplaceCreateScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: MarketplaceCreateScreen()),
       ),
       GoRoute(
         path: '/marketplace/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return MarketplaceDetailScreen(itemId: id);
+          return BackToHomeWrapper(child: MarketplaceDetailScreen(itemId: id));
+        },
+      ),
+      GoRoute(
+        path: '/marketplace/:id/edit',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return BackToHomeWrapper(child: MarketplaceCreateScreen(itemId: id));
         },
       ),
       GoRoute(
         path: '/points',
-        builder: (context, state) => const PointsScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: PointsScreen()),
       ),
       GoRoute(
         path: '/chat',
-        builder: (context, state) => const ChatListScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: ChatListScreen()),
       ),
       GoRoute(
         path: '/chat/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return ChatRoomScreen(roomId: id);
+          return BackToHomeWrapper(child: ChatRoomScreen(roomId: id));
         },
       ),
       GoRoute(
         path: '/notices',
-        builder: (context, state) => const NoticesListScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: NoticesListScreen()),
       ),
       GoRoute(
         path: '/notices/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return NoticeDetailScreen(noticeId: id);
+          return BackToHomeWrapper(child: NoticeDetailScreen(noticeId: id));
         },
       ),
       GoRoute(
         path: '/notifications',
-        builder: (context, state) => const NotificationsScreen(),
+        builder: (context, state) => const BackToHomeWrapper(child: NotificationsScreen()),
       ),
     ],
   );
@@ -133,8 +152,8 @@ class HomeScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.person),
-            onPressed: () => context.push('/profile/edit'),
-            tooltip: '프로필 수정',
+            onPressed: () => context.push('/me'),
+            tooltip: '마이페이지',
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -208,6 +227,60 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 홈 화면용 wrapper - 두 번 뒤로가기 시 종료
+class HomeWrapper extends StatefulWidget {
+  const HomeWrapper({super.key});
+
+  @override
+  State<HomeWrapper> createState() => _HomeWrapperState();
+}
+
+class _HomeWrapperState extends State<HomeWrapper> {
+  DateTime? _lastBackPressed;
+
+  Future<bool> _onWillPop() async {
+    final now = DateTime.now();
+    if (_lastBackPressed == null ||
+        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+      _lastBackPressed = now;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('한 번 더 누르면 앱이 종료됩니다.')),
+        );
+      }
+      return false;
+    }
+    return true; // 실제 종료
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: const HomeScreen(),
+    );
+  }
+}
+
+/// 하단 뒤로가기를 누르면 항상 메인으로 이동하게 하는 wrapper
+class BackToHomeWrapper extends StatelessWidget {
+  const BackToHomeWrapper({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        // 이 wrapper가 적용된 화면에서는 항상 홈으로 이동
+        GoRouter.of(context).go('/');
+        return false;
+      },
+      child: child,
     );
   }
 }

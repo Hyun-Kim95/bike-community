@@ -160,4 +160,37 @@ export class MarketplaceService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  async findMyItems(userId: string, page = 1, limit = 20) {
+    const qb = this.itemRepo
+      .createQueryBuilder('item')
+      .leftJoinAndSelect('item.seller', 'seller')
+      .select([
+        'item.id',
+        'item.title',
+        'item.category',
+        'item.price',
+        'item.imageUrls',
+        'item.region',
+        'item.saleStatus',
+        'item.viewCount',
+        'item.wishCount',
+        'item.createdAt',
+        'seller.id',
+        'seller.nickname',
+      ])
+      .where('item.sellerId = :userId', { userId })
+      .orderBy('item.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }

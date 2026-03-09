@@ -30,6 +30,22 @@ export class ReportsService {
     return this.reportRepo.save(report);
   }
 
+  async findMyReports(reporterId: string, page = 1, limit = 20) {
+    const [items, total] = await this.reportRepo.findAndCount({
+      where: { reporterId },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   private async validateTarget(targetType: ReportTargetType, targetId: string): Promise<void> {
     if (targetType === ReportTargetType.POST) {
       const post = await this.postRepo.findOne({ where: { id: targetId } });

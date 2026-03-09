@@ -51,6 +51,24 @@ class CommunityRepository {
     return Post.fromJson(res.data ?? {});
   }
 
+  Future<Post> updatePost({
+    required String id,
+    String? title,
+    String? content,
+    String? category,
+    List<String>? imageUrls,
+    String? videoUrl,
+  }) async {
+    final data = <String, dynamic>{};
+    if (title != null) data['title'] = title;
+    if (content != null) data['content'] = content;
+    if (category != null) data['category'] = category;
+    if (imageUrls != null) data['imageUrls'] = imageUrls;
+    if (videoUrl != null && videoUrl.isNotEmpty) data['videoUrl'] = videoUrl;
+    final res = await _api.patch<Map<String, dynamic>>('/posts/$id', data: data);
+    return Post.fromJson(res.data ?? {});
+  }
+
   Future<void> deletePost(String id) async {
     await _api.delete('/posts/$id');
   }
@@ -84,5 +102,13 @@ class CommunityRepository {
 
   Future<void> deleteComment(String commentId) async {
     await _api.delete('/posts/comments/$commentId');
+  }
+
+  Future<PostListResponse> getMyPosts({int page = 1, int limit = 20}) async {
+    final res = await _api.get<Map<String, dynamic>>(
+      '/posts/me',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    return PostListResponse.fromJson(res.data ?? {});
   }
 }

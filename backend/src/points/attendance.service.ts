@@ -12,21 +12,17 @@ export class AttendanceService {
     private readonly pointsService: PointsService,
   ) {}
 
+  /** 한국 시간(Asia/Seoul) 기준 오늘 날짜 YYYY-MM-DD */
   private getTodayDateString(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
   }
 
+  /** 한국 시간 기준 어제 날짜 YYYY-MM-DD */
   private getYesterdayDateString(): string {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const todayStr = this.getTodayDateString();
+    const todayMidnightKST = new Date(`${todayStr}T00:00:00+09:00`);
+    const yesterday = new Date(todayMidnightKST.getTime() - 24 * 60 * 60 * 1000);
+    return yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
   }
 
   async checkIn(userId: string): Promise<{

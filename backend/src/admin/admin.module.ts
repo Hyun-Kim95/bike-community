@@ -12,6 +12,7 @@ import { MarketplaceItem } from '../marketplace/entities/marketplace-item.entity
 import { Report } from '../reports/entities/report.entity';
 import { Notice } from '../notices/entities/notice.entity';
 import { PointHistory } from '../points/entities/point-history.entity';
+import { PointsModule } from '../points/points.module';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminAuthController } from './admin-auth.controller';
 import { AdminUsersController } from './admin-users.controller';
@@ -20,6 +21,8 @@ import { AdminStatsService } from './admin-stats.service';
 import { AdminStatsController } from './admin-stats.controller';
 import { AdminReportsController } from './admin-reports.controller';
 import { AdminNoticesController } from './admin-notices.controller';
+import { AdminGradesController } from './admin-grades.controller';
+import { AdminPointsController } from './admin-points.controller';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 
 @Module({
@@ -35,6 +38,7 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
       Notice,
       PointHistory,
     ]),
+    PointsModule,
     PassportModule.register({ defaultStrategy: 'admin-jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -52,6 +56,8 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
     AdminStatsController,
     AdminReportsController,
     AdminNoticesController,
+    AdminGradesController,
+    AdminPointsController,
   ],
   providers: [AdminAuthService, AdminJwtStrategy, AdminStatsService],
   exports: [AdminAuthService],

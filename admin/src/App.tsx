@@ -7,6 +7,8 @@ import { Users } from './pages/Users'
 import { Reports } from './pages/Reports'
 import { Notices } from './pages/Notices'
 import { Posts } from './pages/Posts'
+import { Grades } from './pages/Grades'
+import { Points } from './pages/Points'
 
 function App() {
   return (
@@ -58,6 +60,26 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Posts />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/grades"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Grades />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/points"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Points />
             </Layout>
           </ProtectedRoute>
         }

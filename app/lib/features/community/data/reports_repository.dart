@@ -21,4 +21,19 @@ class ReportsRepository {
       if (detail != null && detail.isNotEmpty) 'detail': detail,
     });
   }
+
+  Future<List<Map<String, dynamic>>> getMyReportsRaw({int page = 1, int limit = 20}) async {
+    final res = await _api.get<Map<String, dynamic>>(
+      '/reports/mine',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    final list = res.data?['items'] as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<List<dynamic>> getMyReports() async {
+    // 실제 모델은 MyPageScreen에서 정의된 MyReport를 사용
+    final list = await getMyReportsRaw();
+    return list;
+  }
 }

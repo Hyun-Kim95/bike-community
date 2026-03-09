@@ -4,12 +4,21 @@ import 'package:flutter/foundation.dart';
 import '../config/env.dart';
 
 typedef GetToken = Future<String?> Function();
+typedef RefreshToken = Future<String?> Function();
 
 /// API HTTP 클라이언트. getToken이 있으면 요청 시 Bearer 토큰 첨부.
+/// refreshToken이 있으면 401 시 토큰 갱신 후 1회 재시도.
+/// 갱신 실패 시 onUnauthorized 호출(로그아웃 후 로그인 페이지 이동용).
 class ApiClient {
   late final Dio _dio;
+  void Function()? _onUnauthorized;
 
-  ApiClient({String? baseUrl, GetToken? getToken}) {
+  ApiClient({
+    String? baseUrl,
+    GetToken? getToken,
+    RefreshToken? refreshToken,
+    void Function()? onUnauthorized,
+  }) : _onUnauthorized = onUnauthorized {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl ?? Env.apiBaseUrl,
       connectTimeout: const Duration(seconds: 15),
@@ -32,6 +41,30 @@ class ApiClient {
         ),
       );
     }
+    if (getToken != null && refreshToken != null) {
+      _dio.interceptors.add(
+        InterceptorsWrapper(
+          onError: (err, handler) async {
+            if (err.response?.statusCode != 401) {
+              return handler.next(err);
+            }
+            final newToken = await refreshToken();
+            if (newToken == null || newToken.isEmpty) {
+              _onUnauthorized?.call();
+              return handler.next(err);
+            }
+            final opts = err.requestOptions;
+            opts.headers['Authorization'] = 'Bearer $newToken';
+            try {
+              final response = await _dio.fetch(opts);
+              return handler.resolve(response);
+            } catch (e) {
+              return handler.next(err);
+            }
+          },
+        ),
+      );
+    }
     _dio.interceptors.add(
       LogInterceptor(
         requestBody: true,
@@ -42,6 +75,10 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
+
+  void setOnUnauthorized(void Function()? cb) {
+    _onUnauthorized = cb;
+  }
 
   Future<Response<T>> get<T>(
     String path, {

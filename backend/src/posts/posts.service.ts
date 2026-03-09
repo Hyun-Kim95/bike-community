@@ -95,6 +95,39 @@ export class PostsService {
     return post;
   }
 
+  async findByAuthor(authorId: string, page = 1, limit = 20) {
+    const qb = this.postRepo
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.author', 'author')
+      .select([
+        'post.id',
+        'post.title',
+        'post.content',
+        'post.category',
+        'post.imageUrls',
+        'post.videoUrl',
+        'post.viewCount',
+        'post.likeCount',
+        'post.commentCount',
+        'post.createdAt',
+        'author.id',
+        'author.nickname',
+      ])
+      .where('post.authorId = :authorId', { authorId })
+      .orderBy('post.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async update(id: string, userId: string, dto: UpdatePostDto): Promise<Post> {
     const post = await this.findOne(id, false);
     if (post.authorId !== userId) {

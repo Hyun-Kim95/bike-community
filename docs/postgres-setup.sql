@@ -80,6 +80,35 @@ CREATE TABLE user_profiles (
 CREATE INDEX idx_user_profiles_userId ON user_profiles("userId");
 
 -- ----------------------------------------
+-- regions (시/도, 구/군 코드 테이블)
+-- ----------------------------------------
+CREATE TABLE regions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
+  code VARCHAR(20) NOT NULL UNIQUE,
+  name VARCHAR(50) NOT NULL,
+  depth INTEGER NOT NULL, -- 1: 시/도, 2: 구/군
+  "parentCode" VARCHAR(20) NULL,
+  "sortOrder" INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_regions_parent_depth ON regions("parentCode", depth);
+
+-- 기본 지역 데이터 (예시)
+INSERT INTO regions (code, name, depth, "parentCode", "sortOrder") VALUES
+  ('SEOUL', '서울특별시', 1, NULL, 10),
+  ('GYEONGGI', '경기도', 1, NULL, 20),
+  ('INCHEON', '인천광역시', 1, NULL, 30);
+
+INSERT INTO regions (code, name, depth, "parentCode", "sortOrder") VALUES
+  ('SEOUL_GANGNAM', '강남구', 2, 'SEOUL', 10),
+  ('SEOUL_MAPO', '마포구', 2, 'SEOUL', 20),
+  ('GYEONGGI_SEONGNAM', '성남시', 2, 'GYEONGGI', 10),
+  ('GYEONGGI_SUWON', '수원시', 2, 'GYEONGGI', 20),
+  ('INCHEON_BUPYEONG', '부평구', 2, 'INCHEON', 10),
+  ('INCHEON_NAM', '미추홀구', 2, 'INCHEON', 20);
+
+-- ----------------------------------------
 -- posts
 -- ----------------------------------------
 CREATE TABLE posts (

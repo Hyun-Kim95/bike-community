@@ -17,6 +17,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _autoLogin = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final auth = context.read<AuthProvider>();
+      final auto = await auth.getAutoLogin();
+      final lastEmail = await auth.getLastEmail();
+      if (!mounted) return;
+      setState(() {
+        _autoLogin = auto;
+        if (lastEmail != null && lastEmail.isNotEmpty) {
+          _emailController.text = lastEmail;
+        }
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -31,6 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final ok = await auth.login(
       _emailController.text.trim(),
       _passwordController.text,
+      autoLogin: _autoLogin,
     );
     if (ok && mounted) context.go('/');
   }
@@ -108,6 +127,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 8),
+                  CheckboxListTile(
+                    value: _autoLogin,
+                    onChanged: (v) => setState(() => _autoLogin = v ?? true),
+                    title: const Text('자동 로그인'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
                   if (context.watch<AuthProvider>().error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),

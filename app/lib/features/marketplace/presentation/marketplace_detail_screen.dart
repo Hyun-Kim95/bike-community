@@ -77,6 +77,42 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
     } catch (_) {}
   }
 
+  Future<void> _deleteItem() async {
+    if (_item == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('판매글 삭제'),
+        content: const Text('이 판매글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final repo = context.read<MarketplaceRepository>();
+      await repo.deleteItem(widget.itemId);
+      if (!mounted) return;
+      context.go('/marketplace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('판매글이 삭제되었습니다.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제에 실패했습니다: $e')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -98,10 +134,31 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
       );
     }
     final item = _item!;
+    final auth = context.watch<AuthProvider>();
+    final isSeller = auth.user != null && item.seller != null && auth.user!.id == item.seller!.id;
     return Scaffold(
       appBar: AppBar(
         title: const Text('상품 상세'),
         actions: [
+          if (isSeller)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (v) async {
+                if (v == 'edit') {
+                  if (!mounted) return;
+                  context.push('/marketplace/${item.id}/edit');
+                } else if (v == 'delete') {
+                  await _deleteItem();
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text('수정')),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('삭제', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
           IconButton(
             icon: Icon(_wished ? Icons.favorite : Icons.favorite_border),
             color: _wished ? Colors.red : null,

@@ -120,6 +120,36 @@ export class AuthService {
     return user ?? null;
   }
 
+  /** 리프레시 토큰으로 새 액세스/리프레시 토큰 발급 */
+  async refreshTokens(refreshToken: string): Promise<AuthResult> {
+    const refreshSecret = this.config.get<string>('JWT_REFRESH_SECRET');
+    if (!refreshSecret) {
+      throw new UnauthorizedException('서버 설정 오류');
+    }
+    let payload: TokenPayload;
+    try {
+      payload = this.jwtService.verify<TokenPayload>(refreshToken, { secret: refreshSecret });
+    } catch {
+      throw new UnauthorizedException('리프레시 토큰이 만료되었거나 유효하지 않습니다.');
+    }
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('유효하지 않은 토큰입니다.');
+    }
+    const user = await this.userRepo.findOne({
+      where: { id: payload.sub },
+      relations: ['profile'],
+    });
+    if (!user || user.status !== UserStatus.NORMAL) {
+      throw new UnauthorizedException('사용자를 찾을 수 없거나 비활성 상태입니다.');
+    }
+    const profile =
+      user.profile ?? (await this.profileRepo.findOne({ where: { userId: user.id } }));
+    if (!profile) {
+      throw new UnauthorizedException('프로필이 없습니다.');
+    }
+    return this.issueTokens(user, profile);
+  }
+
   private issueTokens(user: User, profile: UserProfile): AuthResult {
     const accessExpires = this.config.get<string>('JWT_ACCESS_EXPIRES', '15m');
     const refreshExpires = this.config.get<string>('JWT_REFRESH_EXPIRES', '7d');

@@ -11,6 +11,13 @@ interface Report {
   adminNote: string | null
   createdAt: string
   reporter?: { nickname: string }
+  targetTitle?: string
+  targetContentPreview?: string
+}
+
+interface ReportDetail extends Report {
+  targetTitle?: string
+  targetContent?: string
 }
 
 const REPORT_STATUS_OPTIONS = [
@@ -19,6 +26,19 @@ const REPORT_STATUS_OPTIONS = [
   { value: 'resolved', label: '조치완료' },
   { value: 'rejected', label: '반려' },
 ] as const
+
+function reportStatusLabel(value: string): string {
+  return REPORT_STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value
+}
+
+const TARGET_TYPE_LABELS: Record<string, string> = {
+  post: '게시글',
+  comment: '댓글',
+  marketplace_item: '거래글',
+}
+function targetTypeLabel(value: string): string {
+  return TARGET_TYPE_LABELS[value] ?? value
+}
 
 const pageTitle = 'text-2xl font-semibold text-foreground mb-4'
 const tableWrap = 'w-full border-collapse rounded-lg border border-border overflow-hidden'
@@ -37,11 +57,12 @@ export function Reports() {
   const [items, setItems] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
-  const [editReport, setEditReport] = useState<Report | null>(null)
+  const [editReport, setEditReport] = useState<ReportDetail | null>(null)
   const [editStatus, setEditStatus] = useState('')
   const [editAdminNote, setEditAdminNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [detailLoading, setDetailLoading] = useState(false)
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -56,11 +77,22 @@ export function Reports() {
     fetchList()
   }, [fetchList])
 
-  const openEdit = (r: Report) => {
-    setEditReport(r)
+  const openEdit = async (r: Report) => {
+    setEditReport({ ...r })
     setEditStatus(r.status)
     setEditAdminNote(r.adminNote ?? '')
     setError('')
+    setDetailLoading(true)
+    try {
+      const detail = await api<ReportDetail>(`/admin/reports/${r.id}`)
+      if (detail && !('error' in detail)) {
+        setEditReport((prev) => prev ? { ...prev, targetTitle: detail.targetTitle, targetContent: detail.targetContent } : null)
+      }
+    } catch {
+      // keep editReport with list item data
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
   const saveEdit = async () => {
@@ -81,15 +113,22 @@ export function Reports() {
     }
   }
 
+  const filterBar = 'rounded-xl border border-border bg-muted/10 p-4 mb-4'
+  const filterLabel = 'text-xs font-medium text-muted-foreground mb-1.5 block'
+  const filterInput = 'rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
+
   return (
     <div>
       <h1 className={pageTitle}>신고 처리</h1>
-      <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputBase} mb-4 w-48`}>
-        <option value="">전체</option>
-        {REPORT_STATUS_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+      <div className={filterBar}>
+        <label className={filterLabel}>상태</label>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${filterInput} w-40`}>
+          <option value="">전체</option>
+          {REPORT_STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
       {loading ? (
         <div className="text-muted-foreground">로딩 중...</div>
       ) : (
@@ -97,6 +136,7 @@ export function Reports() {
           <thead className={tableHead}>
             <tr>
               <th className={th}>대상</th>
+              <th className={th}>신고한 대상 내용</th>
               <th className={th}>사유</th>
               <th className={th}>신고자</th>
               <th className={th}>상태</th>
@@ -107,10 +147,22 @@ export function Reports() {
           <tbody className={tableBody}>
             {items.map((r) => (
               <tr key={r.id}>
-                <td className={td}>{r.targetType} / {r.targetId.slice(0, 8)}...</td>
+                <td className={td}>{targetTypeLabel(r.targetType)}</td>
+                <td className={`${td} max-w-[280px]`} title={[r.targetTitle, r.targetContentPreview].filter(Boolean).join(' / ') || undefined}>
+                  <span className="line-clamp-2 text-sm text-foreground">
+                    {r.targetTitle ? (
+                      <>
+                        <span className="font-medium block truncate">{r.targetTitle}</span>
+                        {r.targetContentPreview && <span className="text-muted-foreground">{r.targetContentPreview}</span>}
+                      </>
+                    ) : (
+                      (r.targetContentPreview || '-')
+                    )}
+                  </span>
+                </td>
                 <td className={td}>{r.reason ?? '-'}</td>
                 <td className={td}>{r.reporter?.nickname ?? '-'}</td>
-                <td className={td}>{r.status}</td>
+                <td className={td}>{reportStatusLabel(r.status)}</td>
                 <td className={td}>{new Date(r.createdAt).toLocaleDateString()}</td>
                 <td className={td}>
                   <button type="button" className={`${btnSecondary} text-sm`} onClick={() => openEdit(r)}>처리</button>
@@ -123,11 +175,31 @@ export function Reports() {
 
       {editReport && (
         <div className={modalOverlay} onClick={() => !saving && setEditReport(null)}>
-          <div className={modalPanel} onClick={(e) => e.stopPropagation()}>
+          <div className={`${modalPanel} max-w-[560px] max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mt-0 mb-2">신고 처리</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              대상: {editReport.targetType} / {editReport.targetId.slice(0, 8)}... · 사유: {editReport.reason ?? '-'}
+            <p className="mb-2 text-sm text-muted-foreground">
+              대상: {targetTypeLabel(editReport.targetType)} · 사유: {editReport.reason ?? '-'}
             </p>
+            {editReport.detail && (
+              <p className="mb-2 text-sm text-foreground">
+                <span className="font-medium text-muted-foreground">신고자 작성 내용: </span>
+                {editReport.detail}
+              </p>
+            )}
+            {detailLoading ? (
+              <p className="text-sm text-muted-foreground mb-4">대상 내용 불러오는 중...</p>
+            ) : (editReport.targetTitle != null || editReport.targetContent != null) ? (
+              <div className="mb-4 rounded border border-border bg-muted/20 p-3 text-sm">
+                <p className="font-medium text-muted-foreground mb-1">신고된 대상 내용</p>
+                {editReport.targetTitle != null && (
+                  <p className="font-medium mb-1">{editReport.targetTitle}</p>
+                )}
+                <div className="whitespace-pre-wrap break-words text-foreground">
+                  {(editReport.targetContent ?? '(내용 없음)').slice(0, 1000)}
+                  {(editReport.targetContent ?? '').length > 1000 && '…'}
+                </div>
+              </div>
+            ) : null}
             {error && <p className="text-destructive mb-3 text-sm">{error}</p>}
             <div className="mb-3">
               <label className="block mb-1 text-sm text-foreground">상태</label>

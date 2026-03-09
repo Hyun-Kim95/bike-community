@@ -12,6 +12,7 @@ import { PointsModule } from './points/points.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ReportsModule } from './reports/reports.module';
 import { NoticesModule } from './notices/notices.module';
+import { RegionsModule } from './regions/regions.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
 
@@ -27,6 +28,7 @@ import { UploadModule } from './upload/upload.module';
     NotificationsModule,
     ReportsModule,
     NoticesModule,
+    RegionsModule,
     AdminModule,
     UploadModule,
   ],

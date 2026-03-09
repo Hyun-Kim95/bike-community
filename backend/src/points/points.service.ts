@@ -3,14 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PointHistory } from './entities/point-history.entity';
 import { UserProfile } from '../users/entities/user-profile.entity';
-
-export const GRADE_POLICY = [
-  { minPoints: 0, name: '새싹 라이더' },
-  { minPoints: 100, name: '일반 라이더' },
-  { minPoints: 500, name: '열정 라이더' },
-  { minPoints: 2000, name: '베테랑 라이더' },
-  { minPoints: 5000, name: '마스터 라이더' },
-];
+import { GradesService } from './grades.service';
 
 export const POINTS = {
   ATTENDANCE: 10,
@@ -26,28 +19,32 @@ export class PointsService {
     private readonly historyRepo: Repository<PointHistory>,
     @InjectRepository(UserProfile)
     private readonly profileRepo: Repository<UserProfile>,
+    private readonly gradesService: GradesService,
   ) {}
 
   async addPoints(userId: string, amount: number, reason: string): Promise<{ balanceAfter: number }> {
     const profile = await this.profileRepo.findOne({ where: { userId } });
     if (!profile) throw new Error('Profile not found');
-    const balanceAfter = profile.totalPoints + amount;
+    const balanceAfter = Math.max(0, profile.totalPoints + amount);
+    const actualAmount = balanceAfter - profile.totalPoints;
     const history = this.historyRepo.create({
       userId,
-      amount,
-      reason,
+      amount: actualAmount,
+      reason: reason.slice(0, 50),
       balanceAfter,
     });
     await this.historyRepo.save(history);
     profile.totalPoints = balanceAfter;
-    profile.gradeName = this.getGradeName(balanceAfter);
+    profile.gradeName = await this.getGradeName(balanceAfter);
     await this.profileRepo.save(profile);
     return { balanceAfter };
   }
 
-  getGradeName(totalPoints: number): string {
-    let name = GRADE_POLICY[0].name;
-    for (const g of GRADE_POLICY) {
+  async getGradeName(totalPoints: number): Promise<string> {
+    const policy = await this.gradesService.getPolicy();
+    if (policy.length === 0) return '새싹 라이더';
+    let name = policy[0].name;
+    for (const g of policy) {
       if (totalPoints >= g.minPoints) name = g.name;
     }
     return name;
@@ -60,6 +57,32 @@ export class PointsService {
       skip: (page - 1) * limit,
       take: limit,
     });
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getHistoryForAdmin(options: {
+    userId?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = options.page ?? 1;
+    const limit = Math.min(options.limit ?? 20, 50);
+    const qb = this.historyRepo
+      .createQueryBuilder('h')
+      .leftJoinAndSelect('h.user', 'user')
+      .orderBy('h.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+    if (options.userId) {
+      qb.andWhere('h.userId = :userId', { userId: options.userId });
+    }
+    const [items, total] = await qb.getManyAndCount();
     return {
       items,
       total,

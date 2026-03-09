@@ -58,6 +58,28 @@ class MarketplaceRepository {
     return MarketplaceItem.fromJson(res.data ?? {});
   }
 
+  Future<MarketplaceItem> updateItem({
+    required String id,
+    String? title,
+    String? category,
+    num? price,
+    String? description,
+    List<String>? imageUrls,
+    String? region,
+    String? saleStatus,
+  }) async {
+    final data = <String, dynamic>{};
+    if (title != null) data['title'] = title;
+    if (category != null) data['category'] = category;
+    if (price != null) data['price'] = price;
+    if (description != null) data['description'] = description;
+    if (imageUrls != null) data['imageUrls'] = imageUrls;
+    if (region != null) data['region'] = region;
+    if (saleStatus != null) data['saleStatus'] = saleStatus;
+    final res = await _api.patch<Map<String, dynamic>>('/marketplace/items/$id', data: data);
+    return MarketplaceItem.fromJson(res.data ?? {});
+  }
+
   Future<void> deleteItem(String id) async {
     await _api.delete('/marketplace/items/$id');
   }
@@ -110,5 +132,13 @@ class MarketplaceRepository {
       limit: res.data?['limit'] as int? ?? 20,
       totalPages: res.data?['totalPages'] as int? ?? 0,
     );
+  }
+
+  Future<MarketplaceListResponse> getMyItems({int page = 1, int limit = 20}) async {
+    final res = await _api.get<Map<String, dynamic>>(
+      '/marketplace/my-items',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    return MarketplaceListResponse.fromJson(res.data ?? {});
   }
 }

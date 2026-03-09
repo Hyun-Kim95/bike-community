@@ -13,6 +13,7 @@ import { User } from '../users/entities/user.entity';
 import { UserProfile } from '../users/entities/user-profile.entity';
 import { UserStatus } from '../users/entities/user.entity';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
+import { PointsService } from '../points/points.service';
 
 @Controller('admin/users')
 @UseGuards(AdminAuthGuard)
@@ -22,6 +23,7 @@ export class AdminUsersController {
     private readonly userRepo: Repository<User>,
     @InjectRepository(UserProfile)
     private readonly profileRepo: Repository<UserProfile>,
+    private readonly pointsService: PointsService,
   ) {}
 
   @Get()
@@ -30,6 +32,9 @@ export class AdminUsersController {
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('status') status?: string,
+    @Query('gradeName') gradeName?: string,
+    @Query('joinedFrom') joinedFrom?: string,
+    @Query('joinedTo') joinedTo?: string,
   ) {
     const p = page ? parseInt(page, 10) : 1;
     const l = Math.min(limit ? parseInt(limit, 10) : 20, 50);
@@ -49,8 +54,28 @@ export class AdminUsersController {
     if (status && Object.values(UserStatus).includes(status as UserStatus)) {
       qb.andWhere('user.status = :status', { status });
     }
+    if (gradeName && gradeName.trim()) {
+      qb.andWhere('profile.gradeName ILIKE :grade', {
+        grade: `%${gradeName.trim()}%`,
+      });
+    }
+    if (joinedFrom && joinedFrom.trim()) {
+      qb.andWhere('user.createdAt >= :joinedFrom', { joinedFrom });
+    }
+    if (joinedTo && joinedTo.trim()) {
+      qb.andWhere('user.createdAt <= :joinedTo', {
+        joinedTo: `${joinedTo.trim()} 23:59:59`,
+      });
+    }
 
     const [items, total] = await qb.getManyAndCount();
+    for (const user of items) {
+      if (user.profile) {
+        user.profile.gradeName = await this.pointsService.getGradeName(
+          user.profile.totalPoints ?? 0,
+        );
+      }
+    }
     return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
   }
 
@@ -61,6 +86,11 @@ export class AdminUsersController {
       relations: ['profile'],
     });
     if (!user) return { error: 'NOT_FOUND' };
+    if (user.profile) {
+      user.profile.gradeName = await this.pointsService.getGradeName(
+        user.profile.totalPoints ?? 0,
+      );
+    }
     return user;
   }
 

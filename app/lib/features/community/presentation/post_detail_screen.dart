@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../auth/presentation/auth_provider.dart';
 import '../data/community_repository.dart';
 import '../data/reports_repository.dart';
 import '../models/post.dart';
@@ -112,6 +114,42 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
+  Future<void> _deletePost() async {
+    if (_post == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('게시글 삭제'),
+        content: const Text('이 게시글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final repo = context.read<CommunityRepository>();
+      await repo.deletePost(widget.postId);
+      if (!mounted) return;
+      context.go('/feed');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('게시글이 삭제되었습니다.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제에 실패했습니다: $e')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -133,6 +171,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       );
     }
     final post = _post!;
+    final auth = context.watch<AuthProvider>();
+    final isAuthor = auth.user != null && post.author != null && auth.user!.id == post.author!.id;
     return Scaffold(
       appBar: AppBar(
         title: const Text('게시글'),
@@ -140,9 +180,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (v) async {
-              if (v == 'report') await _showReportDialog(context, targetType: 'post', targetId: post.id);
+              if (v == 'edit') {
+                if (!mounted) return;
+                context.push('/posts/${post.id}/edit');
+              } else if (v == 'report') {
+                await _showReportDialog(context, targetType: 'post', targetId: post.id);
+              } else if (v == 'delete') {
+                await _deletePost();
+              }
             },
-            itemBuilder: (_) => [const PopupMenuItem(value: 'report', child: Text('신고'))],
+            itemBuilder: (_) {
+              final items = <PopupMenuEntry<String>>[];
+              if (isAuthor) {
+                items.addAll(const [
+                  PopupMenuItem(value: 'edit', child: Text('수정')),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text('삭제', style: TextStyle(color: Colors.red)),
+                  ),
+                  PopupMenuDivider(),
+                ]);
+              }
+              items.add(const PopupMenuItem(value: 'report', child: Text('신고')));
+              return items;
+            },
           ),
         ],
       ),
