@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../config/env.dart';
 import '../theme/theme_mode_provider.dart';
 import '../../features/auth/presentation/auth_provider.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -50,100 +49,123 @@ GoRouter createAppRouter(ChangeNotifier authProvider) {
       ),
       GoRoute(
         path: '/me',
-        builder: (context, state) => const BackToHomeWrapper(child: MyPageScreen()),
+        builder: (context, state) => const MyPageScreen(),
       ),
       GoRoute(
         path: '/profile/edit',
-        builder: (context, state) => const BackToHomeWrapper(child: ProfileEditScreen()),
+        builder: (context, state) => const ProfileEditScreen(),
       ),
       GoRoute(
         path: '/feed',
-        builder: (context, state) => const BackToHomeWrapper(child: FeedScreen()),
+        builder: (context, state) => const FeedScreen(),
       ),
       GoRoute(
         path: '/posts/create',
-        builder: (context, state) => const BackToHomeWrapper(child: CreatePostScreen()),
+        builder: (context, state) => const CreatePostScreen(),
       ),
       GoRoute(
         path: '/posts/:id/edit',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BackToHomeWrapper(child: CreatePostScreen(postId: id));
+          return CreatePostScreen(postId: id);
         },
       ),
       GoRoute(
         path: '/posts/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BackToHomeWrapper(child: PostDetailScreen(postId: id));
+          return PostDetailScreen(postId: id);
         },
       ),
       GoRoute(
         path: '/marketplace',
-        builder: (context, state) => const BackToHomeWrapper(child: MarketplaceListScreen()),
+        builder: (context, state) => const MarketplaceListScreen(),
       ),
       GoRoute(
         path: '/marketplace/create',
-        builder: (context, state) => const BackToHomeWrapper(child: MarketplaceCreateScreen()),
+        builder: (context, state) => const MarketplaceCreateScreen(),
       ),
       GoRoute(
         path: '/marketplace/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BackToHomeWrapper(child: MarketplaceDetailScreen(itemId: id));
+          return MarketplaceDetailScreen(itemId: id);
         },
       ),
       GoRoute(
         path: '/marketplace/:id/edit',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BackToHomeWrapper(child: MarketplaceCreateScreen(itemId: id));
+          return MarketplaceCreateScreen(itemId: id);
         },
       ),
       GoRoute(
         path: '/points',
-        builder: (context, state) => const BackToHomeWrapper(child: PointsScreen()),
+        builder: (context, state) => const PointsScreen(),
       ),
       GoRoute(
         path: '/chat',
-        builder: (context, state) => const BackToHomeWrapper(child: ChatListScreen()),
+        builder: (context, state) => const ChatListScreen(),
       ),
       GoRoute(
         path: '/chat/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BackToHomeWrapper(child: ChatRoomScreen(roomId: id));
+          return ChatRoomScreen(roomId: id);
         },
       ),
       GoRoute(
         path: '/notices',
-        builder: (context, state) => const BackToHomeWrapper(child: NoticesListScreen()),
+        builder: (context, state) => const NoticesListScreen(),
       ),
       GoRoute(
         path: '/notices/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BackToHomeWrapper(child: NoticeDetailScreen(noticeId: id));
+          return NoticeDetailScreen(noticeId: id);
         },
       ),
       GoRoute(
         path: '/notifications',
-        builder: (context, state) => const BackToHomeWrapper(child: NotificationsScreen()),
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
   );
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+
+  static const _titles = [
+    '커뮤니티',
+    '중고 거래',
+    '채팅',
+    '마이페이지',
+    '공지사항',
+  ];
+
+  final _pages = const [
+    FeedScreen(embed: true),
+    MarketplaceListScreen(embed: true),
+    ChatListScreen(embed: true),
+    MyPageScreen(embed: true),
+    NoticesListScreen(embed: true),
+  ];
+
+  @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
     final themeMode = context.watch<ThemeModeProvider>();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bike Community'),
+        title: Text(_titles[_currentIndex]),
         actions: [
           IconButton(
             icon: Icon(themeMode.isDark ? Icons.light_mode : Icons.dark_mode),
@@ -151,81 +173,41 @@ class HomeScreen extends StatelessWidget {
             tooltip: themeMode.isDark ? '라이트 모드' : '다크 모드',
           ),
           IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => context.push('/me'),
-            tooltip: '마이페이지',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await auth.logout();
-              if (context.mounted) context.go('/login');
-            },
+            icon: const Icon(Icons.notifications),
+            onPressed: () => context.push('/notifications'),
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (auth.user != null) ...[
-              Text('안녕하세요, ${auth.user!.nickname}님'),
-              const SizedBox(height: 8),
-              Text(
-                '등급: ${auth.user!.profile.gradeName} | 포인트: ${auth.user!.profile.totalPoints}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () => context.push('/profile/edit'),
-                icon: const Icon(Icons.edit),
-                label: const Text('프로필 수정'),
-              ),
-            ] else
-              const Text('자전거 커뮤니티 & 중고 거래'),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () => context.push('/feed'),
-              icon: const Icon(Icons.forum),
-              label: const Text('커뮤니티 피드'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: () => context.push('/marketplace'),
-              icon: const Icon(Icons.shopping_bag),
-              label: const Text('중고 거래'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: () => context.push('/points'),
-              icon: const Icon(Icons.stars),
-              label: const Text('포인트 & 출석'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: () => context.push('/chat'),
-              icon: const Icon(Icons.chat),
-              label: const Text('채팅 목록'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: () => context.push('/notices'),
-              icon: const Icon(Icons.campaign),
-              label: const Text('공지사항'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: () => context.push('/notifications'),
-              icon: const Icon(Icons.notifications),
-              label: const Text('알림함'),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'API: ${Uri.parse(Env.apiBaseUrl).host}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (i) => setState(() => _currentIndex = i),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.forum),
+            label: '커뮤니티',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_bag),
+            label: '중고 거래',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat),
+            label: '채팅',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: '마이페이지',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.campaign),
+            label: '공지',
+          ),
+        ],
       ),
     );
   }

@@ -62,7 +62,7 @@ export class CommentsService {
     }
     return this.commentRepo.findOne({
       where: { id: saved.id },
-      relations: ['author'],
+      relations: ['author', 'author.profile'],
     }) as Promise<Comment>;
   }
 
@@ -73,7 +73,7 @@ export class CommentsService {
   ): Promise<{ items: Comment[]; total: number }> {
     const [items, total] = await this.commentRepo.findAndCount({
       where: { postId },
-      relations: ['author'],
+      relations: ['author', 'author.profile'],
       order: { createdAt: 'ASC' },
       skip: (page - 1) * limit,
       take: limit,

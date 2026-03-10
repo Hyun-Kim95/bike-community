@@ -80,13 +80,27 @@ class MarketplaceItem {
 class ItemSeller {
   final String id;
   final String nickname;
+  final String? avatarUrl;
 
-  const ItemSeller({required this.id, required this.nickname});
+  const ItemSeller({
+    required this.id,
+    required this.nickname,
+    this.avatarUrl,
+  });
 
   factory ItemSeller.fromJson(Map<String, dynamic> json) {
+    String? avatar;
+    // 백엔드에서 seller.profile.avatarUrl 구조로 내려오므로 우선 profile에서 읽는다.
+    final profile = json['profile'];
+    if (profile is Map && profile['avatarUrl'] != null) {
+      avatar = profile['avatarUrl'] as String?;
+    } else {
+      avatar = json['avatarUrl'] as String?;
+    }
     return ItemSeller(
       id: json['id'] as String? ?? '',
       nickname: json['nickname'] as String? ?? '',
+      avatarUrl: avatar,
     );
   }
 }

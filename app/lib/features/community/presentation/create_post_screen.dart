@@ -25,6 +25,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _videoUrlController = TextEditingController();
   final List<XFile> _pickedImages = [];
   static const int _maxImages = 3;
+  List<String> _existingImageUrls = [];
   String? _category;
   List<String> _categories = [];
   bool _loading = false;
@@ -63,6 +64,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           _contentController.text = existing.content;
           _videoUrlController.text = existing.videoUrl ?? '';
           _category = existing.category;
+          _existingImageUrls = existing.imageUrls ?? [];
         } else {
           if (_categories.isNotEmpty && _category == null) {
             _category = _categories.first;
@@ -73,7 +75,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    if (_pickedImages.length >= _maxImages) return;
+    if (_pickedImages.length + _existingImageUrls.length >= _maxImages) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('이미지는 최대 $_maxImages장까지 등록할 수 있습니다.')),
+        );
+      }
+      return;
+    }
     final picker = ImagePicker();
     final xFile = await picker.pickImage(source: source, imageQuality: 85);
     if (xFile == null || !mounted) return;
@@ -97,7 +106,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     try {
       final uploadRepo = context.read<UploadRepository>();
       final communityRepo = context.read<CommunityRepository>();
-      final List<String> imageUrls = [];
+      // 기존 이미지 + 새로 업로드한 이미지 URL을 합쳐서 전송
+      final List<String> imageUrls = List.of(_existingImageUrls);
       for (final xFile in _pickedImages) {
         final url = await uploadRepo.uploadImageFromXFile(xFile);
         imageUrls.add(url);
@@ -114,7 +124,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           title: title,
           content: content,
           category: category,
-          // 이미지 수정은 새로 업로드한 경우에만 교체, 없으면 그대로 유지
           imageUrls: imageUrls.isEmpty ? null : imageUrls,
           videoUrl: videoUrl.isEmpty ? null : videoUrl,
         );
@@ -199,68 +208,127 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               },
             ),
             const SizedBox(height: 16),
-            if (!_isEdit) ...[
-              const Text('이미지 (선택, 최대 $_maxImages장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  if (_pickedImages.length < _maxImages) ...[
-                    OutlinedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.gallery),
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('갤러리'),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('카메라'),
-                    ),
-                  ],
-                ],
+            if (_isEdit && _existingImageUrls.isNotEmpty) ...[
+              const Text(
+                '등록된 이미지',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
-              if (_pickedImages.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 100,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _pickedImages.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) {
-                      return Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: FutureBuilder<dynamic>(
-                              future: _pickedImages[i].readAsBytes(),
-                              builder: (context, snapshot) {
-                                if (snapshot.hasData) {
-                                  return Image.memory(snapshot.data!, width: 100, height: 100, fit: BoxFit.cover);
-                                }
-                                return Container(width: 100, height: 100, color: Colors.grey.shade300, child: const Center(child: CircularProgressIndicator(strokeWidth: 2)));
-                              },
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _existingImageUrls.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final url = _existingImageUrls[i];
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            url,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) => Container(
+                              width: 100,
+                              height: 100,
+                              color: Colors.grey.shade300,
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.broken_image),
                             ),
                           ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.black54,
-                                padding: const EdgeInsets.all(4),
-                                minimumSize: const Size(28, 28),
-                              ),
-                              onPressed: () => _removeImage(i),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                              padding: const EdgeInsets.all(4),
+                              minimumSize: const Size(28, 28),
                             ),
+                            onPressed: () {
+                              setState(() {
+                                _existingImageUrls.removeAt(i);
+                              });
+                            },
                           ),
-                        ],
-                      );
-                    },
-                  ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            const Text('이미지 (선택, 최대 $_maxImages장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (_pickedImages.length + _existingImageUrls.length < _maxImages) ...[
+                  OutlinedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('갤러리'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('카메라'),
+                  ),
+                ],
               ],
+            ),
+            if (_pickedImages.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _pickedImages.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: FutureBuilder<dynamic>(
+                            future: _pickedImages[i].readAsBytes(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                return Image.memory(snapshot.data!, width: 100, height: 100, fit: BoxFit.cover);
+                              }
+                              return Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey.shade300,
+                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              );
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                              padding: const EdgeInsets.all(4),
+                              minimumSize: const Size(28, 28),
+                            ),
+                            onPressed: () => _removeImage(i),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
               const SizedBox(height: 16),
             ],
             TextFormField(

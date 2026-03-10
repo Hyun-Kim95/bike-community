@@ -6,7 +6,10 @@ import '../data/marketplace_repository.dart';
 import '../models/marketplace_item.dart';
 
 class MarketplaceListScreen extends StatefulWidget {
-  const MarketplaceListScreen({super.key});
+  const MarketplaceListScreen({super.key, this.embed = false});
+
+  /// true면 상단 AppBar 없이 내용만, FAB만 포함해서 탭 내에서 사용
+  final bool embed;
 
   @override
   State<MarketplaceListScreen> createState() => _MarketplaceListScreenState();
@@ -92,6 +95,62 @@ class _MarketplaceListScreenState extends State<MarketplaceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = RefreshIndicator(
+      onRefresh: () => _load(refresh: true),
+      child: _loading && _items.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _items.length + (_loadingMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index >= _items.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final item = _items[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: ListTile(
+                    leading: item.imageUrls.isNotEmpty
+                        ? Image.network(
+                            item.imageUrls.first,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.image_not_supported),
+                          )
+                        : const Icon(Icons.two_wheeler, size: 40),
+                    title: Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text('${item.priceFormatted} · ${item.region}'),
+                    trailing: Text(
+                      item.statusLabel,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    onTap: () => context.push('/marketplace/${item.id}'),
+                  ),
+                );
+              },
+            ),
+    );
+
+    if (widget.embed) {
+      return Scaffold(
+        body: body,
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => context.push('/marketplace/create'),
+          child: const Icon(Icons.add),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('중고 거래'),
@@ -111,47 +170,7 @@ class _MarketplaceListScreenState extends State<MarketplaceListScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _load(refresh: true),
-        child: _loading && _items.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: _items.length + (_loadingMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index >= _items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  final item = _items[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: ListTile(
-                      leading: item.imageUrls.isNotEmpty
-                          ? Image.network(
-                              item.imageUrls.first,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported),
-                            )
-                          : const Icon(Icons.two_wheeler, size: 40),
-                      title: Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text('${item.priceFormatted} · ${item.region}'),
-                      trailing: Text(item.statusLabel, style: Theme.of(context).textTheme.labelSmall),
-                      onTap: () => context.push('/marketplace/${item.id}'),
-                    ),
-                  );
-                },
-              ),
-      ),
+      body: body,
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/marketplace/create'),
         child: const Icon(Icons.add),

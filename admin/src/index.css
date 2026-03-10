@@ -14,7 +14,8 @@
   --secondary: oklch(0.8214 0.0720 249.3482);
   --secondary-foreground: oklch(0.3211 0 0);
   --muted: oklch(0.8202 0.0213 91.6163);
-  --muted-foreground: oklch(0.5382 0 0);
+  /* 읽기 어려운 보조 텍스트 대비를 높이기 위해 약간 더 진하게 조정 */
+  --muted-foreground: oklch(0.45 0 0);
   --accent: oklch(0.6475 0.0642 117.4260);
   --accent-foreground: oklch(1.0000 0 0);
   --destructive: oklch(0.6368 0.2078 25.3313);
@@ -68,8 +69,9 @@
   --primary-foreground: oklch(1.0000 0 0);
   --secondary: oklch(0.3390 0.1793 301.6848);
   --secondary-foreground: oklch(0.9219 0 0);
-  --muted: oklch(0.3867 0 0);
-  --muted-foreground: oklch(0.7155 0 0);
+  --muted: oklch(0.35 0 0);
+  /* 다크 모드에서 채팅/보조 텍스트가 더 잘 보이도록 밝기를 높임 */
+  --muted-foreground: oklch(0.88 0 0);
   --accent: oklch(0.6746 0.1414 261.3380);
   --accent-foreground: oklch(0.9219 0 0);
   --destructive: oklch(0.6368 0.2078 25.3313);

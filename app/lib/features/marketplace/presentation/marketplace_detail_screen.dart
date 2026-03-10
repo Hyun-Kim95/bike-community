@@ -219,9 +219,24 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Row(
                         children: [
-                          CircleAvatar(child: Text((item.seller!.nickname).isNotEmpty ? item.seller!.nickname[0] : '?')),
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundImage: (item.seller!.avatarUrl != null &&
+                                    item.seller!.avatarUrl!.isNotEmpty)
+                                ? NetworkImage(item.seller!.avatarUrl!)
+                                : null,
+                            child: (item.seller!.avatarUrl == null ||
+                                    item.seller!.avatarUrl!.isEmpty)
+                                ? Text(
+                                    (item.seller!.nickname).isNotEmpty
+                                        ? item.seller!.nickname[0]
+                                        : '?',
+                                  )
+                                : null,
+                          ),
                           const SizedBox(width: 12),
-                          Text(item.seller!.nickname, style: Theme.of(context).textTheme.titleSmall),
+                          Text(item.seller!.nickname,
+                              style: Theme.of(context).textTheme.titleSmall),
                         ],
                       ),
                     ),

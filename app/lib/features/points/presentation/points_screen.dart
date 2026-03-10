@@ -25,6 +25,8 @@ class _PointsScreenState extends State<PointsScreen> {
       final repo = context.read<PointsRepository>();
       final status = await repo.getTodayStatus();
       final history = await repo.getHistory();
+      // 서버 기준 최신 프로필(포인트/등급)로 동기화
+      await context.read<AuthProvider>().getMe();
       if (mounted) {
         setState(() {
           _todayStatus = status;

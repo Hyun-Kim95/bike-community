@@ -6,7 +6,10 @@ import '../data/community_repository.dart';
 import '../models/post.dart';
 
 class FeedScreen extends StatefulWidget {
-  const FeedScreen({super.key});
+  const FeedScreen({super.key, this.embed = false});
+
+  /// true면 상단 AppBar 없이 내용만, FAB만 포함해서 탭 내에서 사용
+  final bool embed;
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -96,6 +99,89 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = RefreshIndicator(
+      onRefresh: () => _load(refresh: true),
+      child: _loading && _items.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _items.length + (_loadingMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index >= _items.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final post = _items[index];
+                final hasMedia = (post.imageUrls != null && post.imageUrls!.isNotEmpty) ||
+                    (post.videoUrl != null && post.videoUrl!.isNotEmpty);
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: ListTile(
+                    leading: hasMedia && post.imageUrls != null && post.imageUrls!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              post.imageUrls!.first,
+                              width: 56,
+                              height: 56,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox(
+                                width: 56,
+                                height: 56,
+                                child: ColoredBox(
+                                  color: Colors.grey,
+                                  child: Icon(Icons.image_not_supported, size: 28),
+                                ),
+                              ),
+                            ),
+                          )
+                        : (post.videoUrl != null && post.videoUrl!.isNotEmpty)
+                            ? const SizedBox(
+                                width: 56,
+                                height: 56,
+                                child: ColoredBox(
+                                  color: Colors.grey,
+                                  child: Icon(Icons.videocam, size: 28),
+                                ),
+                              )
+                            : null,
+                    title: Text(
+                      post.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Row(
+                      children: [
+                        if (post.author != null) Text(post.author!.nickname),
+                        const SizedBox(width: 8),
+                        Text(post.category),
+                        const Spacer(),
+                        Text('${post.likeCount} 좋아요'),
+                        const SizedBox(width: 8),
+                        Text('${post.commentCount} 댓글'),
+                      ],
+                    ),
+                    onTap: () => context.push('/posts/${post.id}'),
+                  ),
+                );
+              },
+            ),
+    );
+
+    if (widget.embed) {
+      // 홈 탭 안에서 사용: 상단 AppBar 없이 리스트 + FAB만
+      return Scaffold(
+        body: body,
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => context.push('/posts/create'),
+          child: const Icon(Icons.edit),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('커뮤니티'),
@@ -115,77 +201,7 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _load(refresh: true),
-        child: _loading && _items.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: _items.length + (_loadingMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index >= _items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  final post = _items[index];
-                  final hasMedia = (post.imageUrls != null && post.imageUrls!.isNotEmpty) ||
-                      (post.videoUrl != null && post.videoUrl!.isNotEmpty);
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: ListTile(
-                      leading: hasMedia && post.imageUrls != null && post.imageUrls!.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                post.imageUrls!.first,
-                                width: 56,
-                                height: 56,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const SizedBox(
-                                  width: 56,
-                                  height: 56,
-                                  child: ColoredBox(
-                                    color: Colors.grey,
-                                    child: Icon(Icons.image_not_supported, size: 28),
-                                  ),
-                                ),
-                              ),
-                            )
-                          : (post.videoUrl != null && post.videoUrl!.isNotEmpty)
-                              ? const SizedBox(
-                                  width: 56,
-                                  height: 56,
-                                  child: ColoredBox(
-                                    color: Colors.grey,
-                                    child: Icon(Icons.videocam, size: 28),
-                                  ),
-                                )
-                              : null,
-                      title: Text(
-                        post.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Row(
-                        children: [
-                          if (post.author != null) Text(post.author!.nickname),
-                          const SizedBox(width: 8),
-                          Text(post.category),
-                          const Spacer(),
-                          Text('${post.likeCount} 좋아요'),
-                          const SizedBox(width: 8),
-                          Text('${post.commentCount} 댓글'),
-                        ],
-                      ),
-                      onTap: () => context.push('/posts/${post.id}'),
-                    ),
-                  );
-                },
-              ),
-      ),
+      body: body,
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/posts/create'),
         child: const Icon(Icons.edit),

@@ -39,6 +39,7 @@ export class MarketplaceService {
     const qb = this.itemRepo
       .createQueryBuilder('item')
       .leftJoinAndSelect('item.seller', 'seller')
+      .leftJoinAndSelect('seller.profile', 'profile')
       .select([
         'item.id',
         'item.title',
@@ -52,6 +53,7 @@ export class MarketplaceService {
         'item.createdAt',
         'seller.id',
         'seller.nickname',
+        'profile.avatarUrl',
       ])
       .where('item.saleStatus != :hidden', { hidden: SaleStatus.HIDDEN });
 
@@ -84,7 +86,7 @@ export class MarketplaceService {
   async findOne(id: string, incrementView = true): Promise<MarketplaceItem> {
     const item = await this.itemRepo.findOne({
       where: { id },
-      relations: ['seller'],
+      relations: ['seller', 'seller.profile'],
     });
     if (!item) throw new NotFoundException('상품을 찾을 수 없습니다.');
     if (incrementView) {
@@ -165,6 +167,7 @@ export class MarketplaceService {
     const qb = this.itemRepo
       .createQueryBuilder('item')
       .leftJoinAndSelect('item.seller', 'seller')
+      .leftJoinAndSelect('seller.profile', 'profile')
       .select([
         'item.id',
         'item.title',
@@ -178,6 +181,7 @@ export class MarketplaceService {
         'item.createdAt',
         'seller.id',
         'seller.nickname',
+        'profile.avatarUrl',
       ])
       .where('item.sellerId = :userId', { userId })
       .orderBy('item.createdAt', 'DESC')

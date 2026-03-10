@@ -307,38 +307,54 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Text('댓글 ${_comments.length}', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
                   ..._comments.map((c) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          child: Text((c.author?.nickname ?? '?').isNotEmpty ? (c.author!.nickname[0]) : '?'),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundImage: (c.author?.avatarUrl != null &&
+                                      c.author!.avatarUrl!.isNotEmpty)
+                                  ? NetworkImage(c.author!.avatarUrl!)
+                                  : null,
+                              child: (c.author?.avatarUrl == null ||
+                                      c.author!.avatarUrl!.isEmpty)
+                                  ? Text((c.author?.nickname ?? '?').isNotEmpty
+                                      ? (c.author!.nickname[0])
+                                      : '?')
+                                  : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(c.author?.nickname ?? '알 수 없음', style: Theme.of(context).textTheme.labelLarge),
-                                  const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(Icons.flag_outlined, size: 18),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () => _showReportDialog(context, targetType: 'comment', targetId: c.id),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        c.author?.nickname ?? '알 수 없음',
+                                        style: Theme.of(context).textTheme.labelLarge,
+                                      ),
+                                      const Spacer(),
+                                      IconButton(
+                                        icon: const Icon(Icons.flag_outlined, size: 18),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () => _showReportDialog(
+                                          context,
+                                          targetType: 'comment',
+                                          targetId: c.id,
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                  Text(c.content),
                                 ],
                               ),
-                              Text(c.content),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  )),
+                      )),
                 ],
               ),
             ),

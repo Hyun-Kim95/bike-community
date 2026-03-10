@@ -1,8 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Report } from './entities/report.entity';
-import { ReportTargetType } from './entities/report.entity';
+import { Report, ReportTargetType } from './entities/report.entity';
 import { Post } from '../posts/entities/post.entity';
 import { Comment } from '../posts/entities/comment.entity';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -37,8 +36,40 @@ export class ReportsService {
       skip: (page - 1) * limit,
       take: limit,
     });
+
+    // 신고 대상 타입에 따라, 앱에서 이동에 필요한 추가 정보를 붙인다.
+    const enrichedItems = await Promise.all(
+      items.map(async (r) => {
+        let targetPostId: string | null = null;
+        let targetChatRoomId: string | null = null;
+        let targetUserId: string | null = null;
+
+        if (r.targetType === ReportTargetType.POST) {
+          targetPostId = r.targetId;
+        } else if (r.targetType === ReportTargetType.COMMENT) {
+          const comment = await this.commentRepo.findOne({
+            where: { id: r.targetId },
+          });
+          targetPostId = comment?.postId ?? null;
+        } else if (r.targetType === ReportTargetType.CHAT) {
+          // 채팅 신고의 경우 targetId를 채팅방 ID로 간주
+          targetChatRoomId = r.targetId;
+        } else if (r.targetType === ReportTargetType.USER) {
+          // 사용자 신고의 경우 targetId를 사용자 ID로 간주
+          targetUserId = r.targetId;
+        }
+
+        return {
+          ...r,
+          targetPostId,
+          targetChatRoomId,
+          targetUserId,
+        };
+      }),
+    );
+
     return {
-      items,
+      items: enrichedItems,
       total,
       page,
       limit,
