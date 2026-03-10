@@ -18,7 +18,9 @@ import 'features/points/data/points_repository.dart';
 import 'features/notices/data/notices_repository.dart';
 import 'features/notifications/data/notifications_repository.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   final storage = AuthStorage();
   final apiClient = ApiClient(
     getToken: storage.getAccessToken,
@@ -41,7 +43,7 @@ void main() {
   final router = createAppRouter(authProvider);
 
   final themeModeProvider = ThemeModeProvider();
-  themeModeProvider.load();
+  await themeModeProvider.load();
 
   runApp(
     MultiProvider(

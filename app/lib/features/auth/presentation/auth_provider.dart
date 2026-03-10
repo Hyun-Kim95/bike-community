@@ -24,28 +24,32 @@ class AuthProvider extends ChangeNotifier {
   Future<void> loadStoredUser() async {
     try {
       final autoLogin = await _repository.getAutoLogin();
-      final lastEmail = await _repository.getLastEmail();
-      final lastPassword = await _repository.getLastPassword();
-
-      // 자동로그인 켜져 있고, 마지막 로그인 정보가 있으면
-      // 앱 시작 시 조용히 다시 로그인 시도
-      if (autoLogin && lastEmail != null && lastPassword != null) {
-        try {
-          final result = await _repository.login(
-            lastEmail,
-            lastPassword,
-            autoLogin: true,
-          );
-          _user = result?.user;
-          return;
-        } catch (_) {
-          // 자동 로그인 실패 시에는 아래 로컬 사용자 복원 로직으로 이동
-        }
+      if (!autoLogin) {
+        // 자동 로그인이 꺼져 있으면, 앱 재시작 시마다 로그인 화면부터 시작
+        _user = null;
+        return;
       }
 
-      // 위에서 자동 로그인에 실패했거나, 자동 로그인 설정이 꺼져 있는 경우:
-      // 로컬에 저장된 사용자 정보를 우선 사용
-      _user = await _repository.getStoredUser();
+      // 1순위: 로컬에 저장된 사용자 정보로 바로 복원
+      final stored = await _repository.getStoredUser();
+      if (stored != null) {
+        _user = stored;
+        return;
+      }
+
+      // 2순위: 토큰이 있을 때만 서버에서 내 정보 재조회
+      final token = await _repository.getAccessToken();
+      if (token == null || token.isEmpty) {
+        _user = null;
+        return;
+      }
+
+      try {
+        final me = await _repository.getMe();
+        _user = me;
+      } catch (_) {
+        _user = null;
+      }
     } catch (_) {
       _user = null;
     } finally {

@@ -32,9 +32,16 @@ class ApiClient {
       _dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) async {
-            final token = await getToken();
-            if (token != null && token.isNotEmpty) {
-              options.headers['Authorization'] = 'Bearer $token';
+            // 로그인/회원가입/토큰갱신 요청에는 Authorization 헤더를 붙이지 않는다.
+            final path = options.path;
+            final isAuthPath = path.contains('/auth/login') ||
+                path.contains('/auth/register') ||
+                path.contains('/auth/refresh');
+            if (!isAuthPath) {
+              final token = await getToken();
+              if (token != null && token.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $token';
+              }
             }
             handler.next(options);
           },
@@ -45,9 +52,20 @@ class ApiClient {
       _dio.interceptors.add(
         InterceptorsWrapper(
           onError: (err, handler) async {
+            // 401이 아니면 토큰 갱신 시도 안 함
             if (err.response?.statusCode != 401) {
               return handler.next(err);
             }
+
+            final path = err.requestOptions.path;
+            // 로그인/회원가입/토큰갱신 요청에서 발생한 401은 재시도하지 않는다.
+            final isAuthPath = path.contains('/auth/login') ||
+                path.contains('/auth/register') ||
+                path.contains('/auth/refresh');
+            if (isAuthPath) {
+              return handler.next(err);
+            }
+
             final newToken = await refreshToken();
             if (newToken == null || newToken.isEmpty) {
               _onUnauthorized?.call();
@@ -58,7 +76,7 @@ class ApiClient {
             try {
               final response = await _dio.fetch(opts);
               return handler.resolve(response);
-            } catch (e) {
+            } catch (_) {
               return handler.next(err);
             }
           },
