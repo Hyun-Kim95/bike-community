@@ -63,9 +63,9 @@ export function Points() {
   const [history, setHistory] = useState<PointHistoryItem[]>([])
   const [historyTotal, setHistoryTotal] = useState(0)
   const [historyPage, setHistoryPage] = useState(1)
-  const [historyLimit] = useState(20)
+  const [historyLimit] = useState(10)
   const [historyLoading, setHistoryLoading] = useState(true)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
     if (!userSearch.trim()) {
@@ -92,7 +92,7 @@ export function Points() {
       const page = overrides?.page ?? historyPage
       const uid = overrides?.userId
       const params = new URLSearchParams({ page: String(page), limit: String(historyLimit) })
-      if (String(uid).trim()) params.set('userId', String(uid).trim())
+      if (String(uid ?? '').trim()) params.set('userId', String(uid).trim())
       api<HistoryResponse>(`/admin/points/history?${params}`)
         .then((res) => {
           setHistory(res.items || [])
@@ -107,11 +107,6 @@ export function Points() {
     },
     [historyPage, historyLimit],
   )
-  useEffect(() => {
-    if (!selectedUser) return
-    setHistoryPage(1)
-    fetchHistory({ page: 1, userId: selectedUser.id })
-  }, [selectedUser, fetchHistory])
 
   useEffect(() => {
     const uid = searchParams.get('userId') ?? ''
@@ -125,7 +120,7 @@ export function Points() {
   // 쿼리로 넘어온 userId가 있으면 회원 선택에도 자동 세팅
   useEffect(() => {
     const uid = searchParams.get('userId') ?? ''
-    if (!uid || selectedUser) return
+    if (!uid) return
     api<User>(`/admin/users/${uid}`)
       .then((u) => {
         setSelectedUser(u)
@@ -133,7 +128,7 @@ export function Points() {
       .catch(() => {
         // ignore errors – 단순히 자동 선택만 시도
       })
-  }, [searchParams, selectedUser])
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -203,7 +198,17 @@ export function Points() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => { setSelectedUser(null); setUserSearch(''); setShowDropdown(false) }}
+                  onClick={() => {
+                    setSelectedUser(null)
+                    setUserSearch('')
+                    setShowDropdown(false)
+                    setHistoryPage(1)
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev)
+                      next.delete('userId')
+                      return next
+                    })
+                  }}
                   className="text-sm text-muted-foreground hover:text-foreground"
                 >
                   변경
@@ -239,6 +244,12 @@ export function Points() {
                             setSelectedUser(u)
                             setUserSearch('')
                             setShowDropdown(false)
+                            setHistoryPage(1)
+                            setSearchParams((prev) => {
+                              const next = new URLSearchParams(prev)
+                              next.set('userId', u.id)
+                              return next
+                            })
                           }}
                         >
                           <span className="font-medium">{u.nickname || u.email}</span>
@@ -273,18 +284,23 @@ export function Points() {
               maxLength={50}
             />
           </div>
-          <button type="submit" className={btnPrimary} disabled={submitting}>
-            {submitting ? '처리 중...' : '적용'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="submit" className={btnPrimary} disabled={submitting}>
+              {submitting ? '처리 중...' : '적용'}
+            </button>
+          </div>
         </form>
       </div>
 
       <div className={card}>
-        <h2 className="text-lg font-medium mb-3">포인트 로그</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-medium">포인트 로그</h2>
+        </div>
         {historyLoading ? (
           <p className="text-muted-foreground">로딩 중...</p>
         ) : (
           <>
+            <div className="admin-pagination-summary-top">총 {historyTotal}건</div>
             <div className="overflow-x-auto">
               <table className={tableWrap}>
                 <thead className={tableHead}>
@@ -325,28 +341,58 @@ export function Points() {
                 </tbody>
               </table>
             </div>
-            {historyTotal > historyLimit && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                <span>
-                  {(historyPage - 1) * historyLimit + 1}–
-                  {Math.min(historyPage * historyLimit, historyTotal)} / {historyTotal}
-                </span>
-                <button
-                  type="button"
-                  className={btnSecondary}
-                  disabled={historyPage <= 1}
-                  onClick={() => setHistoryPage((p) => p - 1)}
-                >
-                  이전
-                </button>
-                <button
-                  type="button"
-                  className={btnSecondary}
-                  disabled={historyPage >= Math.ceil(historyTotal / historyLimit)}
-                  onClick={() => setHistoryPage((p) => p + 1)}
-                >
-                  다음
-                </button>
+            {historyTotal > 0 && (
+              <div className="admin-pagination">
+                <div className="admin-pagination-nav">
+                  <button
+                    type="button"
+                    className="admin-pagination-button"
+                    onClick={() => { setHistoryPage(1); fetchHistory({ page: 1 }) }}
+                    disabled={historyPage <= 1}
+                  >
+                    «
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-pagination-button"
+                    onClick={() => {
+                      const next = Math.max(1, historyPage - 1)
+                      setHistoryPage(next)
+                      fetchHistory({ page: next })
+                    }}
+                    disabled={historyPage <= 1}
+                  >
+                    ‹
+                  </button>
+                  <span className="admin-pagination-page">
+                    {historyPage} / {Math.max(1, Math.ceil(historyTotal / historyLimit))}
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-pagination-button"
+                    onClick={() => {
+                      const lastPage = Math.max(1, Math.ceil(historyTotal / historyLimit))
+                      const next = Math.min(lastPage, historyPage + 1)
+                      setHistoryPage(next)
+                      fetchHistory({ page: next })
+                    }}
+                    disabled={historyPage >= Math.max(1, Math.ceil(historyTotal / historyLimit))}
+                  >
+                    ›
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-pagination-button"
+                    onClick={() => {
+                      const lastPage = Math.max(1, Math.ceil(historyTotal / historyLimit))
+                      setHistoryPage(lastPage)
+                      fetchHistory({ page: lastPage })
+                    }}
+                    disabled={historyPage >= Math.max(1, Math.ceil(historyTotal / historyLimit))}
+                  >
+                    »
+                  </button>
+                </div>
               </div>
             )}
           </>

@@ -173,3 +173,27 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+@layer components {
+  .admin-pagination {
+    @apply mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground;
+  }
+
+  .admin-pagination-summary-top {
+    @apply mb-2 text-xs sm:text-sm text-muted-foreground;
+  }
+
+  .admin-pagination-nav {
+    @apply flex items-center gap-2;
+  }
+
+  .admin-pagination-button {
+    @apply inline-flex items-center justify-center h-8 w-8 rounded-md border border-border bg-card text-foreground
+      hover:bg-muted hover:text-foreground cursor-pointer text-xs
+      disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .admin-pagination-page {
+    @apply text-xs sm:text-sm text-foreground;
+  }
+}

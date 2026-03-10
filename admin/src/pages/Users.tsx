@@ -79,9 +79,11 @@ export function Users() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const limit = 10
+
   const fetchList = useCallback(() => {
     setLoading(true)
-    const params = new URLSearchParams({ page: String(page), limit: '20' })
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
     if (search.trim()) params.set('search', search.trim())
     if (statusFilter) params.set('status', statusFilter)
     if (gradeFilter) params.set('gradeName', gradeFilter)
@@ -93,7 +95,7 @@ export function Users() {
         setTotal(res.total)
       })
       .finally(() => setLoading(false))
-  }, [page, search, statusFilter, gradeFilter, joinedFrom, joinedTo])
+  }, [page, search, statusFilter, gradeFilter, joinedFrom, joinedTo, limit])
 
   useEffect(() => {
     fetchList()
@@ -221,36 +223,77 @@ export function Users() {
       {loading ? (
         <div className="text-muted-foreground">로딩 중...</div>
       ) : (
-        <table className={tableWrap}>
-          <thead className={tableHead}>
-            <tr>
-              <th className={th}>이메일</th>
-              <th className={th}>닉네임</th>
-              <th className={th}>상태</th>
-              <th className={th}>등급</th>
-              <th className={th}>포인트</th>
-              <th className={th}>가입일</th>
-              <th className={th}>관리</th>
-            </tr>
-          </thead>
-          <tbody className={tableBody}>
-            {items.map((u) => (
-              <tr key={u.id}>
-                <td className={td}>{u.email}</td>
-                <td className={td}>{u.nickname}</td>
-                <td className={td}>{statusLabel(u.status)}</td>
-                <td className={td}>{u.profile?.gradeName ?? '-'}</td>
-                <td className={td}>{u.profile?.totalPoints ?? 0}</td>
-                <td className={td}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                <td className={td}>
-                  <button type="button" className={`${btnSecondary} text-sm`} onClick={() => openDetail(u)}>상세</button>
-                </td>
+        <>
+          <div className="admin-pagination-summary-top">총 {total}명</div>
+          <table className={tableWrap}>
+            <thead className={tableHead}>
+              <tr>
+                <th className={th}>이메일</th>
+                <th className={th}>닉네임</th>
+                <th className={th}>상태</th>
+                <th className={th}>등급</th>
+                <th className={th}>포인트</th>
+                <th className={th}>가입일</th>
+                <th className={th}>관리</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className={tableBody}>
+              {items.map((u) => (
+                <tr key={u.id}>
+                  <td className={td}>{u.email}</td>
+                  <td className={td}>{u.nickname}</td>
+                  <td className={td}>{statusLabel(u.status)}</td>
+                  <td className={td}>{u.profile?.gradeName ?? '-'}</td>
+                  <td className={td}>{u.profile?.totalPoints ?? 0}</td>
+                  <td className={td}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td className={td}>
+                    <button type="button" className={`${btnSecondary} text-sm`} onClick={() => openDetail(u)}>상세</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="admin-pagination">
+            <div className="admin-pagination-nav">
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(1)}
+                disabled={page <= 1}
+              >
+                «
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                ‹
+              </button>
+              <span className="admin-pagination-page">
+                {page} / {Math.max(1, Math.ceil(total / limit))}
+              </span>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / limit)), p + 1))}
+                disabled={page >= Math.max(1, Math.ceil(total / limit))}
+              >
+                ›
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(Math.max(1, Math.ceil(total / limit)))}
+                disabled={page >= Math.max(1, Math.ceil(total / limit))}
+              >
+                »
+              </button>
+            </div>
+          </div>
+        </>
       )}
-      <p className="mt-4 text-muted-foreground">총 {total}명</p>
 
       {detailUser && (
         <div className={modalOverlay} onClick={closeDetail}>

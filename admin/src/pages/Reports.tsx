@@ -57,6 +57,8 @@ export function Reports() {
   const [items, setItems] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
   const [editReport, setEditReport] = useState<ReportDetail | null>(null)
   const [editStatus, setEditStatus] = useState('')
   const [editAdminNote, setEditAdminNote] = useState('')
@@ -64,14 +66,19 @@ export function Reports() {
   const [error, setError] = useState('')
   const [detailLoading, setDetailLoading] = useState(false)
 
+  const limit = 10
+
   const fetchList = useCallback(() => {
     setLoading(true)
-    const params = new URLSearchParams({ page: '1', limit: '30' })
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
     if (status) params.set('status', status)
-    api<{ items: Report[] }>(`/admin/reports?${params}`)
-      .then((res) => setItems(res.items))
+    api<{ items: Report[]; total: number; page: number; limit: number; totalPages: number }>(`/admin/reports?${params}`)
+      .then((res) => {
+        setItems(res.items)
+        setTotal(res.total ?? 0)
+      })
       .finally(() => setLoading(false))
-  }, [status])
+  }, [status, page, limit])
 
   useEffect(() => {
     fetchList()
@@ -122,7 +129,11 @@ export function Reports() {
       <h1 className={pageTitle}>신고 처리</h1>
       <div className={filterBar}>
         <label className={filterLabel}>상태</label>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${filterInput} w-40`}>
+        <select
+          value={status}
+          onChange={(e) => { setStatus(e.target.value); setPage(1) }}
+          className={`${filterInput} w-40`}
+        >
           <option value="">전체</option>
           {REPORT_STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -132,45 +143,87 @@ export function Reports() {
       {loading ? (
         <div className="text-muted-foreground">로딩 중...</div>
       ) : (
-        <table className={tableWrap}>
-          <thead className={tableHead}>
-            <tr>
-              <th className={th}>대상</th>
-              <th className={th}>신고한 대상 내용</th>
-              <th className={th}>사유</th>
-              <th className={th}>신고자</th>
-              <th className={th}>상태</th>
-              <th className={th}>접수일</th>
-              <th className={th}>관리</th>
-            </tr>
-          </thead>
-          <tbody className={tableBody}>
-            {items.map((r) => (
-              <tr key={r.id}>
-                <td className={td}>{targetTypeLabel(r.targetType)}</td>
-                <td className={`${td} max-w-[280px]`} title={[r.targetTitle, r.targetContentPreview].filter(Boolean).join(' / ') || undefined}>
-                  <span className="line-clamp-2 text-sm text-foreground">
-                    {r.targetTitle ? (
-                      <>
-                        <span className="font-medium block truncate">{r.targetTitle}</span>
-                        {r.targetContentPreview && <span className="text-muted-foreground">{r.targetContentPreview}</span>}
-                      </>
-                    ) : (
-                      (r.targetContentPreview || '-')
-                    )}
-                  </span>
-                </td>
-                <td className={td}>{r.reason ?? '-'}</td>
-                <td className={td}>{r.reporter?.nickname ?? '-'}</td>
-                <td className={td}>{reportStatusLabel(r.status)}</td>
-                <td className={td}>{new Date(r.createdAt).toLocaleDateString()}</td>
-                <td className={td}>
-                  <button type="button" className={`${btnSecondary} text-sm`} onClick={() => openEdit(r)}>처리</button>
-                </td>
+        <>
+          <div className="admin-pagination-summary-top">총 {total}건</div>
+          <table className={tableWrap}>
+            <thead className={tableHead}>
+              <tr>
+                <th className={th}>대상</th>
+                <th className={th}>신고한 대상 내용</th>
+                <th className={th}>사유</th>
+                <th className={th}>신고자</th>
+                <th className={th}>상태</th>
+                <th className={th}>접수일</th>
+                <th className={th}>관리</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className={tableBody}>
+              {items.map((r) => (
+                <tr key={r.id}>
+                  <td className={td}>{targetTypeLabel(r.targetType)}</td>
+                  <td className={`${td} max-w-[280px]`} title={[r.targetTitle, r.targetContentPreview].filter(Boolean).join(' / ') || undefined}>
+                    <span className="line-clamp-2 text-sm text-foreground">
+                      {r.targetTitle ? (
+                        <>
+                          <span className="font-medium block truncate">{r.targetTitle}</span>
+                          {r.targetContentPreview && <span className="text-muted-foreground">{r.targetContentPreview}</span>}
+                        </>
+                      ) : (
+                        (r.targetContentPreview || '-')
+                      )}
+                    </span>
+                  </td>
+                  <td className={td}>{r.reason ?? '-'}</td>
+                  <td className={td}>{r.reporter?.nickname ?? '-'}</td>
+                  <td className={td}>{reportStatusLabel(r.status)}</td>
+                  <td className={td}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                  <td className={td}>
+                    <button type="button" className={`${btnSecondary} text-sm`} onClick={() => openEdit(r)}>처리</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="admin-pagination">
+            <div className="admin-pagination-nav">
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(1)}
+                disabled={page <= 1}
+              >
+                «
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                ‹
+              </button>
+              <span className="admin-pagination-page">
+                {page} / {Math.max(1, Math.ceil(total / limit))}
+              </span>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / limit)), p + 1))}
+                disabled={page >= Math.max(1, Math.ceil(total / limit))}
+              >
+                ›
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(Math.max(1, Math.ceil(total / limit)))}
+                disabled={page >= Math.max(1, Math.ceil(total / limit))}
+              >
+                »
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {editReport && (

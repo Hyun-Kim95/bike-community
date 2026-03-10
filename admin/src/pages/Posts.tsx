@@ -52,7 +52,7 @@ export function Posts() {
   const [items, setItems] = useState<Post[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [limit] = useState(20)
+  const [limit] = useState(10)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -250,6 +250,7 @@ export function Posts() {
         <div className="text-muted-foreground">로딩 중...</div>
       ) : (
         <>
+          <div className="admin-pagination-summary-top">총 {total}건</div>
           <table className={tableWrap}>
             <thead className={tableHead}>
               <tr>
@@ -322,17 +323,45 @@ export function Posts() {
               </div>
             </div>
           )}
-          <p className="mt-4 text-muted-foreground">
-            총 {total}건
-            {totalPages > 1 && (
-              <>
-                {' · '}
-                <button type="button" className={btn + ' text-primary'} onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>이전</button>
-                {' '}{page} / {totalPages}{' '}
-                <button type="button" className={btn + ' text-primary'} onClick={() => setPage((x) => Math.min(totalPages, x + 1))} disabled={page >= totalPages}>다음</button>
-              </>
-            )}
-          </p>
+          <div className="admin-pagination">
+            <div className="admin-pagination-nav">
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(1)}
+                disabled={page <= 1}
+              >
+                «
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((x) => Math.max(1, x - 1))}
+                disabled={page <= 1}
+              >
+                ‹
+              </button>
+              <span className="admin-pagination-page">
+                {page} / {totalPages}
+              </span>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((x) => Math.min(totalPages, x + 1))}
+                disabled={page >= totalPages}
+              >
+                ›
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(totalPages)}
+                disabled={page >= totalPages}
+              >
+                »
+              </button>
+            </div>
+          </div>
         </>
       )}
     </div>

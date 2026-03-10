@@ -26,6 +26,8 @@ const modalPanel = 'bg-card text-card-foreground p-6 rounded-lg shadow-lg border
 export function Notices() {
   const [items, setItems] = useState<Notice[]>([])
   const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [modalNotice, setModalNotice] = useState<Notice | null>(null)
   const [isCreate, setIsCreate] = useState(false)
   const [formTitle, setFormTitle] = useState('')
@@ -34,12 +36,18 @@ export function Notices() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const limit = 10
+
   const fetchList = useCallback(() => {
     setLoading(true)
-    api<{ items: Notice[] }>('/admin/notices?limit=50')
-      .then((res) => setItems(res.items))
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    api<{ items: Notice[]; total: number; page: number; limit: number; totalPages: number }>(`/admin/notices?${params}`)
+      .then((res) => {
+        setItems(res.items)
+        setTotal(res.total ?? 0)
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [page, limit])
 
   useEffect(() => {
     fetchList()
@@ -114,35 +122,77 @@ export function Notices() {
   return (
     <div>
       <h1 className={pageTitle}>공지사항</h1>
-      <div className="mb-4">
+      <div className="mb-4 flex justify-end">
         <button type="button" className={btnPrimary} onClick={openCreate}>공지 등록</button>
       </div>
       {loading ? (
         <div className="text-muted-foreground">로딩 중...</div>
       ) : (
-        <table className={tableWrap}>
-          <thead className={tableHead}>
-            <tr>
-              <th className={th}>제목</th>
-              <th className={th}>고정</th>
-              <th className={th}>등록일</th>
-              <th className={th}>관리</th>
-            </tr>
-          </thead>
-          <tbody className={tableBody}>
-            {items.map((n) => (
-              <tr key={n.id}>
-                <td className={td}>{n.title}</td>
-                <td className={td}>{n.pinned ? 'Y' : ''}</td>
-                <td className={td}>{new Date(n.createdAt).toLocaleDateString()}</td>
-                <td className={td}>
-                  <button type="button" className={`${btnSecondary} text-sm mr-2`} onClick={() => openEdit(n)}>수정</button>
-                  <button type="button" className={`${btnDestructive} text-sm`} onClick={() => deleteNotice(n)}>삭제</button>
-                </td>
+        <>
+          <div className="admin-pagination-summary-top">총 {total}건</div>
+          <table className={tableWrap}>
+            <thead className={tableHead}>
+              <tr>
+                <th className={th}>제목</th>
+                <th className={th}>고정</th>
+                <th className={th}>등록일</th>
+                <th className={th}>관리</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className={tableBody}>
+              {items.map((n) => (
+                <tr key={n.id}>
+                  <td className={td}>{n.title}</td>
+                  <td className={td}>{n.pinned ? 'Y' : ''}</td>
+                  <td className={td}>{new Date(n.createdAt).toLocaleDateString()}</td>
+                  <td className={td}>
+                    <button type="button" className={`${btnSecondary} text-sm mr-2`} onClick={() => openEdit(n)}>수정</button>
+                    <button type="button" className={`${btnDestructive} text-sm`} onClick={() => deleteNotice(n)}>삭제</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="admin-pagination">
+            <div className="admin-pagination-nav">
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(1)}
+                disabled={page <= 1}
+              >
+                «
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                ‹
+              </button>
+              <span className="admin-pagination-page">
+                {page} / {Math.max(1, Math.ceil(total / limit))}
+              </span>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / limit)), p + 1))}
+                disabled={page >= Math.max(1, Math.ceil(total / limit))}
+              >
+                ›
+              </button>
+              <button
+                type="button"
+                className="admin-pagination-button"
+                onClick={() => setPage(Math.max(1, Math.ceil(total / limit)))}
+                disabled={page >= Math.max(1, Math.ceil(total / limit))}
+              >
+                »
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {showModal && (
