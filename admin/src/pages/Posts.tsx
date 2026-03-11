@@ -186,7 +186,13 @@ export function Posts() {
               </span>
               <button
                 type="button"
-                onClick={() => { setSelectedAuthor(null); setAuthorSearch(''); setShowAuthorDropdown(false); setPage(1) }}
+              onClick={() => {
+                setSelectedAuthor(null)
+                setAuthorIdFilter('')
+                setAuthorSearch('')
+                setShowAuthorDropdown(false)
+                setPage(1)
+              }}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 변경

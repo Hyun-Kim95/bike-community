@@ -56,7 +56,8 @@ export class PostsService {
         'post.createdAt',
         'author.id',
         'author.nickname',
-      ]);
+      ])
+      .where('post.isDeleted = false');
 
     if (category) {
       qb.andWhere('post.category = :category', { category });
@@ -84,7 +85,7 @@ export class PostsService {
 
   async findOne(id: string, incrementView = true): Promise<Post> {
     const post = await this.postRepo.findOne({
-      where: { id },
+      where: { id, isDeleted: false },
       relations: ['author'],
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
@@ -114,6 +115,7 @@ export class PostsService {
         'author.nickname',
       ])
       .where('post.authorId = :authorId', { authorId })
+      .andWhere('post.isDeleted = false')
       .orderBy('post.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
@@ -146,6 +148,7 @@ export class PostsService {
     if (post.authorId !== userId) {
       throw new ForbiddenException('삭제 권한이 없습니다.');
     }
-    await this.postRepo.remove(post);
+    post.isDeleted = true;
+    await this.postRepo.save(post);
   }
 }

@@ -22,4 +22,7 @@ export class Comment extends BaseEntity {
 
   @Column({ type: 'text' })
   content: string;
+
+  @Column({ type: 'boolean', default: false })
+  isDeleted: boolean;
 }

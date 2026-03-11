@@ -6,6 +6,7 @@ import { ReportStatus, ReportTargetType } from '../reports/entities/report.entit
 import { Post } from '../posts/entities/post.entity';
 import { Comment } from '../posts/entities/comment.entity';
 import { MarketplaceItem } from '../marketplace/entities/marketplace-item.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { CurrentAdmin } from './decorators/current-admin.decorator';
 import { AdminUser } from './entities/admin-user.entity';
@@ -22,6 +23,8 @@ export class AdminReportsController {
     private readonly commentRepo: Repository<Comment>,
     @InjectRepository(MarketplaceItem)
     private readonly marketplaceRepo: Repository<MarketplaceItem>,
+    @InjectRepository(ActivityLog)
+    private readonly logRepo: Repository<ActivityLog>,
   ) {}
 
   @Get()
@@ -137,6 +140,20 @@ export class AdminReportsController {
     if (body.adminNote !== undefined) report.adminNote = body.adminNote;
     report.processedBy = admin.id;
     await this.reportRepo.save(report);
+
+    await this.logRepo.save(
+      this.logRepo.create({
+        adminId: admin.id,
+        action: 'report.update',
+        targetType: 'report',
+        targetId: report.id,
+        meta: {
+          status: report.status,
+          adminNote: report.adminNote,
+        },
+      }),
+    );
+
     return report;
   }
 }

@@ -12,8 +12,11 @@ import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { UserProfile } from '../users/entities/user-profile.entity';
 import { UserStatus } from '../users/entities/user.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { PointsService } from '../points/points.service';
+import { CurrentAdmin } from './decorators/current-admin.decorator';
+import { AdminUser } from './entities/admin-user.entity';
 
 @Controller('admin/users')
 @UseGuards(AdminAuthGuard)
@@ -23,6 +26,8 @@ export class AdminUsersController {
     private readonly userRepo: Repository<User>,
     @InjectRepository(UserProfile)
     private readonly profileRepo: Repository<UserProfile>,
+    @InjectRepository(ActivityLog)
+    private readonly logRepo: Repository<ActivityLog>,
     private readonly pointsService: PointsService,
   ) {}
 
@@ -98,6 +103,7 @@ export class AdminUsersController {
   async update(
     @Param('id') id: string,
     @Body() body: { status?: string; gradeName?: string; totalPoints?: number },
+    @CurrentAdmin() admin: AdminUser,
   ) {
     const user = await this.userRepo.findOne({ where: { id }, relations: ['profile'] });
     if (!user) return { error: 'NOT_FOUND' };
@@ -113,6 +119,21 @@ export class AdminUsersController {
       if (body.totalPoints !== undefined) profile.totalPoints = body.totalPoints;
       await this.profileRepo.save(profile);
     }
+
+    await this.logRepo.save(
+      this.logRepo.create({
+        adminId: admin.id,
+        action: 'user.update',
+        targetType: 'user',
+        targetId: user.id,
+        meta: {
+          status: user.status,
+          gradeName: body.gradeName,
+          totalPoints: body.totalPoints,
+        },
+      }),
+    );
+
     return this.getOne(id);
   }
 }

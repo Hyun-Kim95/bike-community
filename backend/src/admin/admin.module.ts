@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminUser } from './entities/admin-user.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 import { User } from '../users/entities/user.entity';
 import { UserProfile } from '../users/entities/user-profile.entity';
 import { Post } from '../posts/entities/post.entity';
@@ -23,12 +24,14 @@ import { AdminReportsController } from './admin-reports.controller';
 import { AdminNoticesController } from './admin-notices.controller';
 import { AdminGradesController } from './admin-grades.controller';
 import { AdminPointsController } from './admin-points.controller';
+import { AdminActivityLogsController } from './admin-activity-logs.controller';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       AdminUser,
+      ActivityLog,
       User,
       UserProfile,
       Post,
@@ -58,6 +61,7 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
     AdminNoticesController,
     AdminGradesController,
     AdminPointsController,
+    AdminActivityLogsController,
   ],
   providers: [AdminAuthService, AdminJwtStrategy, AdminStatsService],
   exports: [AdminAuthService],

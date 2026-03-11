@@ -9,6 +9,7 @@ import { Notices } from './pages/Notices'
 import { Posts } from './pages/Posts'
 import { Grades } from './pages/Grades'
 import { Points } from './pages/Points'
+import { ActivityLogs } from './pages/ActivityLogs'
 
 function App() {
   return (
@@ -80,6 +81,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Points />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/activity-logs"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ActivityLogs />
             </Layout>
           </ProtectedRoute>
         }

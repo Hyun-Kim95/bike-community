@@ -46,6 +46,9 @@ export class Post extends BaseEntity {
   @Column({ type: 'int', default: 0 })
   commentCount: number;
 
+  @Column({ type: 'boolean', default: false })
+  isDeleted: boolean;
+
   @OneToMany(() => Comment, (c) => c.post)
   comments: Comment[];
 

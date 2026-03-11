@@ -7,17 +7,27 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { PointsService } from '../points/points.service';
+import { ActivityLog } from './entities/activity-log.entity';
+import { CurrentAdmin } from './decorators/current-admin.decorator';
+import { AdminUser } from './entities/admin-user.entity';
 
 @Controller('admin/points')
 @UseGuards(AdminAuthGuard)
 export class AdminPointsController {
-  constructor(private readonly pointsService: PointsService) {}
+  constructor(
+    private readonly pointsService: PointsService,
+    @InjectRepository(ActivityLog)
+    private readonly logRepo: Repository<ActivityLog>,
+  ) {}
 
   @Post()
   async grantOrDeduct(
     @Body() body: { userId: string; amount: number; reason: string },
+    @CurrentAdmin() admin: AdminUser,
   ) {
     const { userId, amount, reason } = body;
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
@@ -35,6 +45,19 @@ export class AdminPointsController {
       userId.trim(),
       numAmount,
       trimmedReason.slice(0, 50),
+    );
+    await this.logRepo.save(
+      this.logRepo.create({
+        adminId: admin.id,
+        action: 'points.change',
+        targetType: 'user',
+        targetId: userId.trim(),
+        meta: {
+          amount: numAmount,
+          reason: trimmedReason.slice(0, 50),
+          balanceAfter: balanceAfter.balanceAfter,
+        },
+      }),
     );
     return { balanceAfter: balanceAfter.balanceAfter };
   }
@@ -66,3 +89,4 @@ export class AdminPointsController {
     return { ...result, items };
   }
 }
+

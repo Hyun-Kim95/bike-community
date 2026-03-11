@@ -65,6 +65,12 @@ export function Layout({ children }: LayoutProps) {
           >
             포인트 관리
           </Link>
+          <Link
+            to="/activity-logs"
+            className="block py-2 px-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          >
+            활동 로그
+          </Link>
         </nav>
         <button
           type="button"

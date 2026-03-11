@@ -12,4 +12,7 @@ export class Notice extends BaseEntity {
 
   @Column({ type: 'boolean', default: false })
   pinned: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isDeleted: boolean;
 }

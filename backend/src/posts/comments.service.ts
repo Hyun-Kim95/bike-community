@@ -72,7 +72,7 @@ export class CommentsService {
     limit = 20,
   ): Promise<{ items: Comment[]; total: number }> {
     const [items, total] = await this.commentRepo.findAndCount({
-      where: { postId },
+      where: { postId, isDeleted: false },
       relations: ['author', 'author.profile'],
       order: { createdAt: 'ASC' },
       skip: (page - 1) * limit,
@@ -100,14 +100,15 @@ export class CommentsService {
 
   async remove(commentId: string, userId: string): Promise<void> {
     const comment = await this.commentRepo.findOne({
-      where: { id: commentId },
+      where: { id: commentId, isDeleted: false },
     });
     if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다.');
     if (comment.authorId !== userId) {
       throw new ForbiddenException('삭제 권한이 없습니다.');
     }
     const postId = comment.postId;
-    await this.commentRepo.remove(comment);
+    comment.isDeleted = true;
+    await this.commentRepo.save(comment);
     const post = await this.postRepo.findOne({ where: { id: postId } });
     if (post && post.commentCount > 0) {
       post.commentCount -= 1;

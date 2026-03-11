@@ -18,7 +18,7 @@ export class NoticesController {
     const p = page ? parseInt(page, 10) : 1;
     const l = Math.min(limit ? parseInt(limit, 10) : 20, 50);
     const [items, total] = await this.noticeRepo.findAndCount({
-      where: {},
+      where: { isDeleted: false },
       order: { pinned: 'DESC', createdAt: 'DESC' },
       skip: (p - 1) * l,
       take: l,
@@ -28,7 +28,7 @@ export class NoticesController {
 
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    const notice = await this.noticeRepo.findOne({ where: { id } });
+    const notice = await this.noticeRepo.findOne({ where: { id, isDeleted: false } });
     if (!notice) throw new NotFoundException('공지를 찾을 수 없습니다.');
     return notice;
   }

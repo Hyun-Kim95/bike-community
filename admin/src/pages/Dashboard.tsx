@@ -32,6 +32,25 @@ export function Dashboard() {
   const maxPosts = Math.max(...stats.postsByDay.map((d) => d.count), 1)
   const maxPoints = Math.max(...stats.pointsByDay.map((d) => d.amount), 1)
 
+  const formatIsoWeekLabel = (isoWeek: string) => {
+    const [yearStr, weekStr] = isoWeek.split('-')
+    const year = Number.parseInt(yearStr, 10)
+    const week = Number.parseInt(weekStr, 10)
+    if (!Number.isFinite(year) || !Number.isFinite(week)) return isoWeek
+
+    // ISO 주차를 대략적인 해당 주의 월/주차로 변환
+    const approx = new Date(year, 0, 1 + (week - 1) * 7)
+    const day = approx.getDay() || 7 // 일요일(0)을 7로 보정
+    const monday = new Date(approx)
+    monday.setDate(approx.getDate() + (1 - day))
+
+    const month = monday.getMonth() + 1
+    const date = monday.getDate()
+    const weekOfMonth = Math.floor((date - 1) / 7) + 1
+
+    return `${month.toString().padStart(2, '0')}월 ${weekOfMonth}주차`
+  }
+
   const txSource =
     txTab === 'day'
       ? stats.transactionsByDay.map((d) => ({
@@ -42,7 +61,7 @@ export function Dashboard() {
         }))
       : txTab === 'week'
         ? stats.transactionsByWeek.map((d) => ({
-            label: d.week,
+            label: formatIsoWeekLabel(d.week),
             count: d.count,
             total: d.totalAmount,
             avg: d.averageAmount,
@@ -186,7 +205,7 @@ export function Dashboard() {
         <ChartCard title="게시글 수 (주별)">
           <MiniBarChart
             data={stats.postsByWeek.map((d) => ({
-              label: d.week,
+              label: formatIsoWeekLabel(d.week),
               value: d.count,
             }))}
             max={Math.max(...stats.postsByWeek.map((d) => d.count), 1)}
@@ -205,10 +224,19 @@ export function Dashboard() {
         </ChartCard>
         <ChartCard title="신고 비율 (대상 종류별)">
           <MiniBarChart
-            data={stats.reportsByTargetType.map((r) => ({
-              label: r.targetType,
-              value: r.ratio,
-            }))}
+            data={stats.reportsByTargetType.map((r) => {
+              const labelMap: Record<string, string> = {
+                post: '게시글',
+                comment: '댓글',
+                chat: '채팅',
+                user: '사용자',
+                review: '후기',
+              }
+              return {
+                label: labelMap[r.targetType] ?? r.targetType,
+                value: r.ratio,
+              }
+            })}
             max={100}
             color="#f97316"
           />
