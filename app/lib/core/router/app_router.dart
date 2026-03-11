@@ -151,12 +151,12 @@ class _HomeScreenState extends State<HomeScreen> {
     '공지사항',
   ];
 
-  final _pages = const [
-    FeedScreen(embed: true),
-    MarketplaceListScreen(embed: true),
-    ChatListScreen(embed: true),
-    MyPageScreen(embed: true),
-    NoticesListScreen(embed: true),
+  List<Widget> get _pages => [
+    FeedScreen(embed: true, isCurrentTab: _currentIndex == 0),
+    MarketplaceListScreen(embed: true, isCurrentTab: _currentIndex == 1),
+    ChatListScreen(embed: true, isCurrentTab: _currentIndex == 2),
+    MyPageScreen(embed: true, isCurrentTab: _currentIndex == 3),
+    NoticesListScreen(embed: true, isCurrentTab: _currentIndex == 4),
   ];
 
   @override

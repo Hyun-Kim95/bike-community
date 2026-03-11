@@ -41,6 +41,10 @@ Future<void> main() async {
     getToken: storage.getAccessToken,
   );
   final router = createAppRouter(authProvider);
+  apiClient.setOnUnauthorized(() {
+    authProvider.logout();
+    router.go('/login');
+  });
 
   final themeModeProvider = ThemeModeProvider();
   await themeModeProvider.load();

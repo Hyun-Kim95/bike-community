@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +26,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _contentController = TextEditingController();
   final _videoUrlController = TextEditingController();
   final List<XFile> _pickedImages = [];
+  final List<Uint8List?> _pickedImageBytes = [];
   static const int _maxImages = 3;
   List<String> _existingImageUrls = [];
   String? _category;
@@ -86,11 +89,36 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final picker = ImagePicker();
     final xFile = await picker.pickImage(source: source, imageQuality: 85);
     if (xFile == null || !mounted) return;
-    setState(() => _pickedImages.add(xFile));
+    final bytes = await xFile.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _pickedImages.add(xFile);
+      _pickedImageBytes.add(bytes);
+    });
   }
 
   void _removeImage(int index) {
-    setState(() => _pickedImages.removeAt(index));
+    setState(() {
+      _pickedImages.removeAt(index);
+      _pickedImageBytes.removeAt(index);
+    });
+  }
+
+  static String _requestErrorMessage(Object e) {
+    if (e is DioException) {
+      if (e.response?.statusCode == 401) {
+        return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
+      }
+      switch (e.type) {
+        case DioExceptionType.receiveTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.connectionTimeout:
+          return '요청 시간이 초과되었습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.';
+        default:
+          break;
+      }
+    }
+    return e.toString();
   }
 
   Future<void> _submit() async {
@@ -139,9 +167,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       if (mounted) context.go('/posts/${post.id}');
     } catch (e) {
       if (mounted) {
-        final msg = e is DioException && e.response?.statusCode == 401
-            ? '로그인이 만료되었습니다. 다시 로그인해 주세요.'
-            : e.toString();
+        final msg = _requestErrorMessage(e);
         setState(() => _error = msg);
       }
     } finally {
@@ -152,6 +178,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? '글 수정' : '글쓰기'),
         actions: [
@@ -231,6 +258,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             width: 100,
                             height: 100,
                             fit: BoxFit.cover,
+                            cacheWidth: 200,
+                            cacheHeight: 200,
                             errorBuilder: (context, error, stack) => Container(
                               width: 100,
                               height: 100,
@@ -296,20 +325,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: FutureBuilder<dynamic>(
-                            future: _pickedImages[i].readAsBytes(),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData) {
-                                return Image.memory(snapshot.data!, width: 100, height: 100, fit: BoxFit.cover);
-                              }
-                              return Container(
-                                width: 100,
-                                height: 100,
-                                color: Colors.grey.shade300,
-                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                              );
-                            },
-                          ),
+                          child: _pickedImageBytes.length > i && _pickedImageBytes[i] != null
+                              ? Image.memory(_pickedImageBytes[i]!, width: 100, height: 100, fit: BoxFit.cover)
+                              : Container(
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.grey.shade300,
+                                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                ),
                         ),
                         Positioned(
                           top: 4,

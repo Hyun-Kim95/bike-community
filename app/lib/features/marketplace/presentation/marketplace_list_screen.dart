@@ -6,10 +6,12 @@ import '../data/marketplace_repository.dart';
 import '../models/marketplace_item.dart';
 
 class MarketplaceListScreen extends StatefulWidget {
-  const MarketplaceListScreen({super.key, this.embed = false});
+  const MarketplaceListScreen({super.key, this.embed = false, this.isCurrentTab = true});
 
   /// true면 상단 AppBar 없이 내용만, FAB만 포함해서 탭 내에서 사용
   final bool embed;
+  /// 홈 탭에서 사용 시, 현재 선택된 탭일 때만 데이터 로드
+  final bool isCurrentTab;
 
   @override
   State<MarketplaceListScreen> createState() => _MarketplaceListScreenState();
@@ -24,6 +26,7 @@ class _MarketplaceListScreenState extends State<MarketplaceListScreen> {
   int _totalPages = 1;
   bool _loading = false;
   bool _loadingMore = false;
+  bool _hasLoaded = false;
 
   Future<void> _load({bool refresh = true}) async {
     if (_loading) return;
@@ -84,7 +87,19 @@ class _MarketplaceListScreenState extends State<MarketplaceListScreen> {
         _loadMore();
       }
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    if (widget.isCurrentTab) {
+      _hasLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MarketplaceListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isCurrentTab && !_hasLoaded) {
+      _hasLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
   }
 
   @override
@@ -95,6 +110,10 @@ class _MarketplaceListScreenState extends State<MarketplaceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasLoaded) {
+      if (widget.embed) return const SizedBox.shrink();
+      return Scaffold(appBar: AppBar(title: const Text('중고 거래')), body: const SizedBox.shrink());
+    }
     final body = RefreshIndicator(
       onRefresh: () => _load(refresh: true),
       child: _loading && _items.isEmpty
@@ -120,6 +139,8 @@ class _MarketplaceListScreenState extends State<MarketplaceListScreen> {
                             width: 56,
                             height: 56,
                             fit: BoxFit.cover,
+                            cacheWidth: 112,
+                            cacheHeight: 112,
                             errorBuilder: (context, error, stackTrace) =>
                                 const Icon(Icons.image_not_supported),
                           )

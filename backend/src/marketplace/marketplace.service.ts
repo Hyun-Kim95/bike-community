@@ -197,4 +197,18 @@ export class MarketplaceService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  /**
+   * 판매자가 거래 완료로 상태를 변경할 때 사용.
+   * 이미 거래완료인 경우에는 그대로 반환.
+   */
+  async markAsSold(itemId: string, sellerId: string): Promise<MarketplaceItem> {
+    const item = await this.findOne(itemId, false);
+    if (item.sellerId !== sellerId) {
+      throw new ForbiddenException('판매자만 거래 완료로 변경할 수 있습니다.');
+    }
+    if (item.saleStatus === SaleStatus.SOLD) return item;
+    item.saleStatus = SaleStatus.SOLD;
+    return this.itemRepo.save(item);
+  }
 }

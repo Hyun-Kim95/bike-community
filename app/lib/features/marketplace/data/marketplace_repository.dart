@@ -141,4 +141,9 @@ class MarketplaceRepository {
     );
     return MarketplaceListResponse.fromJson(res.data ?? {});
   }
+
+  Future<MarketplaceItem> markAsSold(String id) async {
+    final res = await _api.post<Map<String, dynamic>>('/marketplace/items/$id/mark-sold');
+    return MarketplaceItem.fromJson(res.data ?? {});
+  }
 }

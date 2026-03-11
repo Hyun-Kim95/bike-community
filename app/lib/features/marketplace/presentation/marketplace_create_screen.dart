@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/upload/upload_repository.dart';
+import '../../auth/presentation/auth_provider.dart';
+import '../../auth/data/regions_repository.dart';
 import '../data/marketplace_repository.dart';
 import '../models/marketplace_item.dart';
 
@@ -30,7 +32,13 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
   static const int _maxImages = 5;
   bool _loading = false;
   bool _uploading = false;
+  bool _regionsLoading = false;
   String? _error;
+
+  List<RegionOption> _regionsLevel1 = [];
+  List<RegionOption> _regionsLevel2 = [];
+  RegionOption? _selectedRegion1;
+  RegionOption? _selectedRegion2;
 
   bool get _isEdit => widget.itemId != null;
 
@@ -59,6 +67,7 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
       }
       final list = await categoriesFuture;
       if (!mounted) return;
+      final defaultRegion = existing?.region ?? context.read<AuthProvider>().user?.profile.region;
       setState(() {
         _categories = list;
         if (existing != null) {
@@ -76,7 +85,70 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
           }
         }
       });
+      if (!mounted) return;
+      await _loadRegions(defaultRegion);
     } catch (_) {}
+  }
+
+  Future<void> _loadRegions(String? currentRegion) async {
+    final repo = context.read<RegionsRepository>();
+    setState(() => _regionsLoading = true);
+    try {
+      final parents = await repo.getParents();
+      RegionOption? selected1;
+      RegionOption? selected2;
+      List<RegionOption> children = [];
+
+      String? parentName;
+      String? childName;
+      if (currentRegion != null && currentRegion.isNotEmpty) {
+        final parts = currentRegion.split(RegExp(r'\s+'));
+        if (parts.isNotEmpty) parentName = parts[0];
+        if (parts.length > 1) childName = parts[1];
+      }
+
+      if (parentName != null) {
+        for (final p in parents) {
+          if (p.name == parentName) {
+            selected1 = p;
+            break;
+          }
+        }
+      }
+      selected1 ??= parents.isNotEmpty ? parents.first : null;
+
+      if (selected1 != null) {
+        children = await repo.getChildren(selected1.code);
+        if (childName != null) {
+          for (final c in children) {
+            if (c.name == childName) {
+              selected2 = c;
+              break;
+            }
+          }
+        }
+      }
+      selected2 ??= children.isNotEmpty ? children.first : null;
+
+      if (!mounted) return;
+      setState(() {
+        _regionsLevel1 = parents;
+        _regionsLevel2 = children;
+        _selectedRegion1 = selected1;
+        _selectedRegion2 = selected2;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _regionsLevel1 = [];
+        _regionsLevel2 = [];
+        _selectedRegion1 = null;
+        _selectedRegion2 = null;
+        _regionController.text = currentRegion ?? '';
+      });
+    } finally {
+      if (mounted) setState(() => _regionsLoading = false);
+    }
   }
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
@@ -94,9 +166,7 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
       if (mounted) setState(() => _imageUrls.add(url));
     } catch (e) {
       if (mounted) {
-        final msg = e is DioException && e.response?.statusCode == 401
-            ? '로그인이 만료되었습니다. 다시 로그인해 주세요.'
-            : e.toString();
+        final msg = _uploadErrorMessage(e);
         setState(() => _error = msg);
       }
     } finally {
@@ -106,6 +176,23 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
 
   void _removeImage(int index) {
     setState(() => _imageUrls.removeAt(index));
+  }
+
+  static String _uploadErrorMessage(Object e) {
+    if (e is DioException) {
+      if (e.response?.statusCode == 401) {
+        return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
+      }
+      switch (e.type) {
+        case DioExceptionType.receiveTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.connectionTimeout:
+          return '요청 시간이 초과되었습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.';
+        default:
+          break;
+      }
+    }
+    return e.toString();
   }
 
   Future<void> _submit() async {
@@ -123,7 +210,13 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
       final price = num.tryParse(_priceController.text.trim()) ?? 0;
       final title = _titleController.text.trim();
       final description = _descriptionController.text.trim();
-      final region = _regionController.text.trim().isEmpty ? '미입력' : _regionController.text.trim();
+      final region = _regionsLevel1.isEmpty
+          ? (_regionController.text.trim().isEmpty ? '미입력' : _regionController.text.trim())
+          : (_selectedRegion1 == null
+              ? '미입력'
+              : _selectedRegion2 == null
+                  ? _selectedRegion1!.name
+                  : '${_selectedRegion1!.name} ${_selectedRegion2!.name}');
 
       MarketplaceItem item;
       if (_isEdit && widget.itemId != null) {
@@ -157,6 +250,7 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? '판매글 수정' : '판매글 등록'),
         actions: [
@@ -210,14 +304,91 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
               },
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _regionController,
-              decoration: const InputDecoration(
-                labelText: '거래 지역',
-                border: OutlineInputBorder(),
-                hintText: '예: 서울 강남',
+            if (_regionsLevel1.isEmpty)
+              TextFormField(
+                controller: _regionController,
+                decoration: const InputDecoration(
+                  labelText: '거래 지역',
+                  border: OutlineInputBorder(),
+                  hintText: '예: 서울 강남',
+                  helperText: '지역 목록을 불러오지 못한 경우 수동으로 입력하세요.',
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedRegion1?.code,
+                      decoration: const InputDecoration(
+                        labelText: '거래 지역 (시/도)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _regionsLevel1
+                          .map(
+                            (r) => DropdownMenuItem(
+                              value: r.code,
+                              child: Text(r.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (code) async {
+                        if (code == null) return;
+                        final regionsRepo = context.read<RegionsRepository>();
+                        final selected = _regionsLevel1.firstWhere(
+                          (r) => r.code == code,
+                          orElse: () => _regionsLevel1.first,
+                        );
+                        setState(() {
+                          _selectedRegion1 = selected;
+                          _regionsLevel2 = [];
+                          _selectedRegion2 = null;
+                          _regionsLoading = true;
+                        });
+                        try {
+                          final children = await regionsRepo.getChildren(code);
+                          if (!mounted) return;
+                          setState(() {
+                            _regionsLevel2 = children;
+                            _selectedRegion2 = children.isNotEmpty ? children.first : null;
+                          });
+                        } finally {
+                          if (mounted) setState(() => _regionsLoading = false);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedRegion2?.code,
+                      decoration: InputDecoration(
+                        labelText: '거래 지역 (구/군)',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: _regionsLoading ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2))) : null,
+                      ),
+                      items: _regionsLevel2
+                          .map(
+                            (r) => DropdownMenuItem(
+                              value: r.code,
+                              child: Text(r.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (_regionsLevel2.isEmpty || _regionsLoading)
+                          ? null
+                          : (code) {
+                              if (code == null) return;
+                              final selected = _regionsLevel2.firstWhere(
+                                (r) => r.code == code,
+                                orElse: () => _regionsLevel2.first,
+                              );
+                              setState(() => _selectedRegion2 = selected);
+                            },
+                    ),
+                  ),
+                ],
               ),
-            ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _descriptionController,
@@ -269,6 +440,8 @@ class _MarketplaceCreateScreenState extends State<MarketplaceCreateScreen> {
                             width: 100,
                             height: 100,
                             fit: BoxFit.cover,
+                            cacheWidth: 200,
+                            cacheHeight: 200,
                             errorBuilder: (_, __, ___) => Container(
                               width: 100,
                               height: 100,

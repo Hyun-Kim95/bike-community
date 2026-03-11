@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Report, ReportTargetType } from './entities/report.entity';
 import { Post } from '../posts/entities/post.entity';
 import { Comment } from '../posts/entities/comment.entity';
+import { Review } from '../marketplace/entities/review.entity';
 import { CreateReportDto } from './dto/create-report.dto';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class ReportsService {
     private readonly postRepo: Repository<Post>,
     @InjectRepository(Comment)
     private readonly commentRepo: Repository<Comment>,
+    @InjectRepository(Review)
+    private readonly reviewRepo: Repository<Review>,
   ) {}
 
   async create(reporterId: string, dto: CreateReportDto): Promise<Report> {
@@ -43,6 +46,7 @@ export class ReportsService {
         let targetPostId: string | null = null;
         let targetChatRoomId: string | null = null;
         let targetUserId: string | null = null;
+        let targetReviewId: string | null = null;
 
         if (r.targetType === ReportTargetType.POST) {
           targetPostId = r.targetId;
@@ -57,6 +61,8 @@ export class ReportsService {
         } else if (r.targetType === ReportTargetType.USER) {
           // 사용자 신고의 경우 targetId를 사용자 ID로 간주
           targetUserId = r.targetId;
+        } else if (r.targetType === ReportTargetType.REVIEW) {
+          targetReviewId = r.targetId;
         }
 
         return {
@@ -64,6 +70,7 @@ export class ReportsService {
           targetPostId,
           targetChatRoomId,
           targetUserId,
+          targetReviewId,
         };
       }),
     );
@@ -90,6 +97,11 @@ export class ReportsService {
     }
     if (targetType === ReportTargetType.USER || targetType === ReportTargetType.CHAT) {
       return; // basic validation
+    }
+    if (targetType === ReportTargetType.REVIEW) {
+      const review = await this.reviewRepo.findOne({ where: { id: targetId } });
+      if (!review) throw new NotFoundException('후기를 찾을 수 없습니다.');
+      return;
     }
     throw new BadRequestException('잘못된 신고 대상입니다.');
   }

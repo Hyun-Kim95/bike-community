@@ -64,7 +64,8 @@ class UploadRepository {
       '/upload/image',
       data: formData,
       options: Options(
-        sendTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
         headers: headers,
       ),
     );

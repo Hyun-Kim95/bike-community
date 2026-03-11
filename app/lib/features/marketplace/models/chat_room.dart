@@ -9,6 +9,7 @@ class ChatRoom {
   final MarketplaceItem? item;
   final ChatRoomUser? buyer;
   final ChatRoomUser? seller;
+  final int unreadCount;
 
   const ChatRoom({
     required this.id,
@@ -19,6 +20,7 @@ class ChatRoom {
     this.item,
     this.buyer,
     this.seller,
+    this.unreadCount = 0,
   });
 
   factory ChatRoom.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class ChatRoom {
       seller: json['seller'] != null
           ? ChatRoomUser.fromJson(Map<String, dynamic>.from(json['seller'] as Map))
           : null,
+      unreadCount: json['unreadCount'] as int? ?? 0,
     );
   }
 }

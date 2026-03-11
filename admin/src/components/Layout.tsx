@@ -17,7 +17,7 @@ export function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       <aside className="w-[220px] shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground flex flex-col py-4">
         <div className="px-4 font-bold mb-4 text-sidebar-primary">
           Bike Admin

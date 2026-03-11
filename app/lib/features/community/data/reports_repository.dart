@@ -22,6 +22,15 @@ class ReportsRepository {
     });
   }
 
+  Future<void> reportReview(String reviewId, {String? reason, String? detail}) async {
+    await _api.post('/reports', data: {
+      'targetType': 'review',
+      'targetId': reviewId,
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+      if (detail != null && detail.isNotEmpty) 'detail': detail,
+    });
+  }
+
   Future<List<Map<String, dynamic>>> getMyReportsRaw({int page = 1, int limit = 20}) async {
     final res = await _api.get<Map<String, dynamic>>(
       '/reports/mine',

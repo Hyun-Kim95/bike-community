@@ -98,8 +98,10 @@ class _ChatRoomRoomScreenState extends State<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final myId = context.watch<AuthProvider>().user?.id ?? '';
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,6 +128,9 @@ class _ChatRoomRoomScreenState extends State<ChatRoomScreen> {
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
                       final isMe = msg.senderId == myId;
+                      final bubbleTextColor = isMe ? colorScheme.onPrimary : colorScheme.onSurface;
+                      // 시간 텍스트는 말풍선 배경과 확실히 대비되도록 고정 색상 사용
+                      final timeTextColor = isMe ? Colors.white70 : Colors.black54;
                       return Align(
                         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
@@ -139,12 +144,25 @@ class _ChatRoomRoomScreenState extends State<ChatRoomScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (msg.content.isNotEmpty) Text(msg.content),
+                              if (msg.content.isNotEmpty)
+                                Text(
+                                  msg.content,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(color: bubbleTextColor),
+                                ),
                               if (msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
-                                Image.network(msg.imageUrl!, width: 120, fit: BoxFit.cover, errorBuilder: (c, e, s) => const SizedBox.shrink()),
+                                Image.network(msg.imageUrl!, width: 120, fit: BoxFit.cover, cacheWidth: 240, cacheHeight: 240, errorBuilder: (c, e, s) => const SizedBox.shrink()),
                               Text(
                                 '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}',
-                                style: Theme.of(context).textTheme.labelSmall,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: timeTextColor,
+                                      fontSize: 11,
+                                    ),
                               ),
                             ],
                           ),

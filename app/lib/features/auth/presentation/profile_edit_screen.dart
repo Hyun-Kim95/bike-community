@@ -253,6 +253,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('프로필 수정'),
         actions: [

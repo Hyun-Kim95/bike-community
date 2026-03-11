@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../data/chat_repository.dart';
 import '../data/marketplace_repository.dart';
+import '../../community/data/reports_repository.dart';
 import '../models/marketplace_item.dart';
 import '../models/review.dart';
 
@@ -113,33 +114,152 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
     }
   }
 
+  Future<void> _markAsSold() async {
+    if (_item == null) return;
+    final auth = context.read<AuthProvider>();
+    final myId = auth.user?.id ?? '';
+
+    // 후기 작성자 후보
+    final reviewerCandidates = <String, String>{};
+    for (final r in _reviews) {
+      reviewerCandidates[r.reviewerId] = r.reviewerNickname;
+    }
+
+    // 채팅했던 사람 후보 (buyer 쪽)
+    final chatCandidates = <String, String>{};
+    try {
+      final chatRepo = context.read<ChatRepository>();
+      final rooms = await chatRepo.getMyRooms();
+      for (final room in rooms.where((r) => r.itemId == _item!.id)) {
+        final other =
+            room.buyerId == myId ? room.seller : room.buyer; // 내가 판매자일 때 buyer, 아니면 seller
+        if (other != null) {
+          if (!reviewerCandidates.containsKey(other.id)) {
+            chatCandidates[other.id] = other.nickname;
+          }
+        }
+      }
+    } catch (_) {
+      // 채팅 목록 로딩 실패는 무시하고 넘어감
+    }
+
+    String? selectedUserId =
+        reviewerCandidates.isNotEmpty ? reviewerCandidates.keys.first : (chatCandidates.keys.isNotEmpty ? chatCandidates.keys.first : null);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('거래 완료 처리'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('거래 상대를 선택하세요.'),
+                const SizedBox(height: 8),
+                if (reviewerCandidates.isNotEmpty) ...[
+                  const Text('후기 작성한 사람', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...reviewerCandidates.entries.map(
+                    (e) => RadioListTile<String>(
+                      title: Text(e.value),
+                      value: e.key,
+                      groupValue: selectedUserId,
+                      onChanged: (v) => setState(() => selectedUserId = v),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (chatCandidates.isNotEmpty) ...[
+                  const Text('다른 사람 (채팅했던 사람들)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...chatCandidates.entries.map(
+                    (e) => RadioListTile<String>(
+                      title: Text(e.value),
+                      value: e.key,
+                      groupValue: selectedUserId,
+                      onChanged: (v) => setState(() => selectedUserId = v),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: selectedUserId == null ? null : () => Navigator.of(ctx).pop(true),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final repo = context.read<MarketplaceRepository>();
+      final updated = await repo.markAsSold(_item!.id);
+      if (!mounted) return;
+      setState(() {
+        _item = updated;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('거래가 완료 상태로 변경되었습니다.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('거래 완료 처리에 실패했습니다: $e')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
+  Widget? _buildBackLeading(BuildContext context) {
+    if (Navigator.of(context).canPop()) return null;
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => context.go('/marketplace'),
+      tooltip: '뒤로',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+    Widget page;
     if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('상품 상세')),
+      page = Scaffold(
+        appBar: AppBar(
+          title: const Text('상품 상세'),
+          leading: _buildBackLeading(context),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
-    }
-    if (_item == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('상품 상세')),
+    } else if (_item == null) {
+      page = Scaffold(
+        appBar: AppBar(
+          title: const Text('상품 상세'),
+          leading: _buildBackLeading(context),
+        ),
         body: const Center(child: Text('상품을 찾을 수 없습니다.')),
       );
-    }
-    final item = _item!;
-    final auth = context.watch<AuthProvider>();
-    final isSeller = auth.user != null && item.seller != null && auth.user!.id == item.seller!.id;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('상품 상세'),
-        actions: [
+    } else {
+      final item = _item!;
+      final auth = context.watch<AuthProvider>();
+      final isSeller = auth.user != null && item.seller != null && auth.user!.id == item.seller!.id;
+      page = Scaffold(
+        appBar: AppBar(
+          title: const Text('상품 상세'),
+          leading: _buildBackLeading(context),
+          actions: [
           if (isSeller)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
@@ -149,14 +269,21 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
                   context.push('/marketplace/${item.id}/edit');
                 } else if (v == 'delete') {
                   await _deleteItem();
+                } else if (v == 'mark_sold') {
+                  await _markAsSold();
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('수정')),
-                PopupMenuItem(
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'edit', child: Text('수정')),
+                const PopupMenuItem(
                   value: 'delete',
                   child: Text('삭제', style: TextStyle(color: Colors.red)),
                 ),
+                if (item.saleStatus != 'sold')
+                  const PopupMenuItem(
+                    value: 'mark_sold',
+                    child: Text('거래완료로 변경'),
+                  ),
               ],
             ),
           IconButton(
@@ -181,6 +308,8 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
                   itemBuilder: (context, i) => Image.network(
                     item.imageUrls[i],
                     fit: BoxFit.cover,
+                    cacheWidth: 800,
+                    cacheHeight: 600,
                     errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.broken_image, size: 48)),
                   ),
                 ),
@@ -252,7 +381,8 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
                       ],
                       const Spacer(),
                       if (_item?.seller != null &&
-                          context.watch<AuthProvider>().user?.id != _item!.seller!.id)
+                          context.watch<AuthProvider>().user?.id != _item!.seller!.id &&
+                          item.saleStatus != 'sold')
                         TextButton.icon(
                           onPressed: () => _showReviewDialog(),
                           icon: const Icon(Icons.rate_review, size: 18),
@@ -280,6 +410,13 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
                                 r.reviewerNickname,
                                 style: Theme.of(context).textTheme.labelMedium,
                               ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.flag_outlined, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => _showReviewReportDialog(r),
+                              ),
                             ],
                           ),
                           if (r.content != null && r.content!.isNotEmpty) ...[
@@ -297,7 +434,8 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
               ),
             ),
           ),
-          if (context.watch<AuthProvider>().user?.id != item.seller?.id)
+          if (context.watch<AuthProvider>().user?.id != item.seller?.id &&
+              item.saleStatus != 'sold')
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -314,6 +452,17 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
         ],
       ),
     );
+    }
+    if (!canPop) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) context.go('/marketplace');
+        },
+        child: page,
+      );
+    }
+    return page;
   }
 
   Future<void> _showReviewDialog() async {
@@ -373,6 +522,96 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('후기 등록에 실패했습니다.')));
+      }
+    }
+  }
+
+  Future<void> _showReviewReportDialog(Review review) async {
+    final result = await showDialog<Map<String, String?>>(
+      context: context,
+      builder: (ctx) {
+        final detailCtrl = TextEditingController();
+        String selectedReason = '스팸/홍보';
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('후기 신고하기'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('신고 사유를 선택하세요.'),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      title: const Text('스팸/홍보'),
+                      value: '스팸/홍보',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('욕설/비방'),
+                      value: '욕설/비방',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('부적절한 내용'),
+                      value: '부적절한 내용',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('기타'),
+                      value: '기타',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    if (selectedReason == '기타') ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: detailCtrl,
+                        decoration: const InputDecoration(
+                          hintText: '기타 사유를 입력하세요 (선택)',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, {
+                    'reason': selectedReason,
+                    'detail': selectedReason == '기타' ? detailCtrl.text.trim() : null,
+                  }),
+                  child: const Text('신고'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (result == null || !mounted) return;
+    final reason = result['reason'];
+    final detail = result['detail'];
+    try {
+      final repo = context.read<ReportsRepository>();
+      await repo.reportReview(review.id, reason: reason, detail: detail);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('후기 신고가 접수되었습니다.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('후기 신고에 실패했습니다: $e')),
+        );
       }
     }
   }

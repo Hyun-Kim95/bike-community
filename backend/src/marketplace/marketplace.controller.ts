@@ -82,6 +82,16 @@ export class MarketplaceController {
     await this.marketplaceService.remove(id, user.id);
   }
 
+  /**
+   * 판매자가 거래 완료를 확정하는 엔드포인트.
+   * 실제 거래 여부는 채팅/후기 등을 통해 판매자가 직접 확인한 뒤 호출한다.
+   */
+  @Post('items/:id/mark-sold')
+  @UseGuards(JwtAuthGuard)
+  async markAsSold(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.marketplaceService.markAsSold(id, user.id);
+  }
+
   @Post('items/:id/wish')
   @UseGuards(JwtAuthGuard)
   async toggleWish(@Param('id') id: string, @CurrentUser() user: User) {

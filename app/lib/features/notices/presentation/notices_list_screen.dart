@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 import '../data/notices_repository.dart';
 
 class NoticesListScreen extends StatefulWidget {
-  const NoticesListScreen({super.key, this.embed = false});
+  const NoticesListScreen({super.key, this.embed = false, this.isCurrentTab = true});
 
   /// true면 상단 AppBar 없이 내용만 그려서 탭 안에서 사용
   final bool embed;
+  /// 홈 탭에서 사용 시, 현재 선택된 탭일 때만 데이터 로드
+  final bool isCurrentTab;
 
   @override
   State<NoticesListScreen> createState() => _NoticesListScreenState();
@@ -16,6 +18,7 @@ class NoticesListScreen extends StatefulWidget {
 
 class _NoticesListScreenState extends State<NoticesListScreen> {
   bool _loading = true;
+  bool _hasLoaded = false;
   NoticeListResponse? _data;
 
   Future<void> _load() async {
@@ -37,11 +40,27 @@ class _NoticesListScreenState extends State<NoticesListScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    if (widget.isCurrentTab) {
+      _hasLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant NoticesListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isCurrentTab && !_hasLoaded) {
+      _hasLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasLoaded) {
+      if (widget.embed) return const SizedBox.shrink();
+      return Scaffold(appBar: AppBar(title: const Text('공지사항')), body: const SizedBox.shrink());
+    }
     if (_loading) {
       final loadingBody = const Center(child: CircularProgressIndicator());
       if (widget.embed) return loadingBody;

@@ -8,6 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from './entities/review.entity';
 import { MarketplaceItem } from './entities/marketplace-item.entity';
+import { TradeChatRoom } from './entities/trade-chat-room.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReviewsService {
@@ -16,6 +18,9 @@ export class ReviewsService {
     private readonly reviewRepo: Repository<Review>,
     @InjectRepository(MarketplaceItem)
     private readonly itemRepo: Repository<MarketplaceItem>,
+    @InjectRepository(TradeChatRoom)
+    private readonly roomRepo: Repository<TradeChatRoom>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(
@@ -38,6 +43,18 @@ export class ReviewsService {
     if (reviewerId === revieweeId) throw new BadRequestException('본인에게 후기를 남길 수 없습니다.');
     if (rating < 1 || rating > 5) throw new BadRequestException('평점은 1~5 사이여야 합니다.');
 
+    // 실제 거래(채팅) 이력이 있는 회원만 후기 작성 허용
+    const sellerId = item.sellerId;
+    const buyerId = reviewerId === sellerId ? revieweeId : reviewerId;
+    const room = await this.roomRepo.findOne({
+      where: { itemId, buyerId, sellerId },
+    });
+    if (!room) {
+      throw new ForbiddenException(
+        '해당 상품에 대해 거래 채팅 이력이 있는 회원만 후기를 작성할 수 있습니다.',
+      );
+    }
+
     const existing = await this.reviewRepo.findOne({
       where: { itemId, reviewerId, revieweeId },
     });
@@ -50,7 +67,25 @@ export class ReviewsService {
       rating,
       content: content ?? null,
     });
-    return this.reviewRepo.save(entity);
+    const saved = await this.reviewRepo.save(entity);
+
+    // 판매자에게 거래 후기 알림 전송
+    const recipientId = sellerId;
+    if (recipientId) {
+      await this.notificationsService.create({
+        userId: recipientId,
+        type: 'review',
+        title: '거래 후기가 도착했습니다',
+        body: item.title,
+        payload: {
+          itemId,
+          reviewerId,
+          reviewId: saved.id,
+        },
+      });
+    }
+
+    return saved;
   }
 
   async findByItem(itemId: string, page = 1, limit = 20) {

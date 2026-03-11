@@ -10,13 +10,16 @@ import '../../marketplace/models/marketplace_item.dart';
 import 'auth_provider.dart';
 
 class MyPageScreen extends StatelessWidget {
-  const MyPageScreen({super.key, this.embed = false});
+  const MyPageScreen({super.key, this.embed = false, this.isCurrentTab = true});
 
   /// true 면 상단 AppBar 없이 내용만 그려서 탭 안에 삽입할 때 사용
   final bool embed;
+  /// 홈 탭에서 사용 시, 현재 선택된 탭일 때만 하위 탭(내 게시글/거래글/신고) 로드
+  final bool isCurrentTab;
 
   @override
   Widget build(BuildContext context) {
+    if (embed && !isCurrentTab) return const SizedBox.shrink();
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
     final bool showInlineTabs = embed;
@@ -169,83 +172,115 @@ class MyPageScreen extends StatelessWidget {
   }
 }
 
-class _MyPostsTab extends StatelessWidget {
+class _MyPostsTab extends StatefulWidget {
   const _MyPostsTab();
 
   @override
+  State<_MyPostsTab> createState() => _MyPostsTabState();
+}
+
+class _MyPostsTabState extends State<_MyPostsTab> {
+  PostListResponse? _data;
+  Object? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final repo = context.read<CommunityRepository>();
+      final res = await repo.getMyPosts();
+      if (mounted) setState(() { _data = res; _loading = false; _error = null; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e; _loading = false; });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final repo = context.read<CommunityRepository>();
-    return FutureBuilder<PostListResponse>(
-      future: repo.getMyPosts(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          if (snapshot.hasError) {
-            return Center(child: Text('내 게시글을 불러오지 못했습니다.\n${snapshot.error}', textAlign: TextAlign.center));
-          }
-          return const Center(child: CircularProgressIndicator());
-        }
-        final posts = snapshot.data!.items;
-        if (posts.isEmpty) {
-          return const Center(child: Text('작성한 게시글이 없습니다.'));
-        }
-        return ListView.separated(
-          itemCount: posts.length,
-          separatorBuilder: (_, __) => const Divider(height: 0),
-          itemBuilder: (context, i) {
-            final p = posts[i];
-            return ListTile(
-              title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${p.category} · ${p.createdAt.toLocal()}'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/posts/${p.id}'),
-            );
-          },
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(child: Text('내 게시글을 불러오지 못했습니다.\n$_error', textAlign: TextAlign.center));
+    }
+    final posts = _data!.items;
+    if (posts.isEmpty) return const Center(child: Text('작성한 게시글이 없습니다.'));
+    return ListView.separated(
+      itemCount: posts.length,
+      separatorBuilder: (_, __) => const Divider(height: 0),
+      itemBuilder: (context, i) {
+        final p = posts[i];
+        return ListTile(
+          title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text('${p.category} · ${p.createdAt.toLocal()}'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/posts/${p.id}'),
         );
       },
     );
   }
 }
 
-class _MyMarketplaceTab extends StatelessWidget {
+class _MyMarketplaceTab extends StatefulWidget {
   const _MyMarketplaceTab();
 
   @override
+  State<_MyMarketplaceTab> createState() => _MyMarketplaceTabState();
+}
+
+class _MyMarketplaceTabState extends State<_MyMarketplaceTab> {
+  MarketplaceListResponse? _data;
+  Object? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final repo = context.read<MarketplaceRepository>();
+      final res = await repo.getMyItems();
+      if (mounted) setState(() { _data = res; _loading = false; _error = null; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e; _loading = false; });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final repo = context.read<MarketplaceRepository>();
-    return FutureBuilder<MarketplaceListResponse>(
-      future: repo.getMyItems(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          if (snapshot.hasError) {
-            return Center(child: Text('내 거래글을 불러오지 못했습니다.\n${snapshot.error}', textAlign: TextAlign.center));
-          }
-          return const Center(child: CircularProgressIndicator());
-        }
-        final items = snapshot.data!.items;
-        if (items.isEmpty) {
-          return const Center(child: Text('등록한 거래글이 없습니다.'));
-        }
-        return ListView.separated(
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const Divider(height: 0),
-          itemBuilder: (context, i) {
-            final item = items[i];
-            return ListTile(
-              leading: item.imageUrls.isNotEmpty
-                  ? Image.network(
-                      item.imageUrls.first,
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported),
-                    )
-                  : const Icon(Icons.image_not_supported),
-              title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${item.priceFormatted} · ${item.statusLabel}'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/marketplace/${item.id}'),
-            );
-          },
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(child: Text('내 거래글을 불러오지 못했습니다.\n$_error', textAlign: TextAlign.center));
+    }
+    final items = _data!.items;
+    if (items.isEmpty) return const Center(child: Text('등록한 거래글이 없습니다.'));
+    return ListView.separated(
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const Divider(height: 0),
+      itemBuilder: (context, i) {
+        final item = items[i];
+        return ListTile(
+          leading: item.imageUrls.isNotEmpty
+              ? Image.network(
+                  item.imageUrls.first,
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  cacheWidth: 112,
+                  cacheHeight: 112,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported),
+                )
+              : const Icon(Icons.image_not_supported),
+          title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text('${item.priceFormatted} · ${item.statusLabel}'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/marketplace/${item.id}'),
         );
       },
     );
@@ -295,109 +330,96 @@ class MyReport {
   }
 }
 
-class _MyReportsTab extends StatelessWidget {
+class _MyReportsTab extends StatefulWidget {
   const _MyReportsTab();
 
-  String _targetLabel(String t) {
-    switch (t) {
-      case 'post':
-        return '게시글';
-      case 'comment':
-        return '댓글';
-      case 'chat':
-        return '채팅';
-      case 'user':
-        return '사용자';
-      default:
-        return t;
+  @override
+  State<_MyReportsTab> createState() => _MyReportsTabState();
+}
+
+class _MyReportsTabState extends State<_MyReportsTab> {
+  List<MyReport>? _reports;
+  Object? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final repo = context.read<ReportsRepository>();
+      final list = await repo.getMyReports();
+      final reports = list
+          .map((e) => MyReport.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+      if (mounted) setState(() { _reports = reports; _loading = false; _error = null; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e; _loading = false; });
     }
   }
 
-  String _statusLabel(String s) {
+  static String _targetLabel(String t) {
+    switch (t) {
+      case 'post': return '게시글';
+      case 'comment': return '댓글';
+      case 'chat': return '채팅';
+      case 'user': return '사용자';
+      default: return t;
+    }
+  }
+
+  static String _statusLabel(String s) {
     switch (s) {
-      case 'pending':
-        return '접수';
-      case 'under_review':
-        return '검토중';
-      case 'resolved':
-        return '조치완료';
-      case 'rejected':
-        return '반려';
-      default:
-        return s;
+      case 'pending': return '접수';
+      case 'under_review': return '검토중';
+      case 'resolved': return '조치완료';
+      case 'rejected': return '반려';
+      default: return s;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final repo = context.read<ReportsRepository>();
-    return FutureBuilder<List<MyReport>>(
-      future: repo.getMyReports().then(
-        (list) => list
-            .map((e) => MyReport.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList(),
-      ),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          if (snapshot.hasError) {
-            return Center(child: Text('신고 내역을 불러오지 못했습니다.\n${snapshot.error}', textAlign: TextAlign.center));
-          }
-          return const Center(child: CircularProgressIndicator());
-        }
-        final reports = snapshot.data!;
-        if (reports.isEmpty) {
-          return const Center(child: Text('신고한 내역이 없습니다.'));
-        }
-        return ListView.separated(
-          itemCount: reports.length,
-          separatorBuilder: (_, __) => const Divider(height: 0),
-          itemBuilder: (context, i) {
-            final r = reports[i];
-            return ListTile(
-              leading: Icon(
-                r.targetType == 'post'
-                    ? Icons.forum
-                    : r.targetType == 'comment'
-                        ? Icons.chat_bubble_outline
-                        : Icons.report,
-              ),
-              title: Text(
-                r.reason ?? '(사유 없음)',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(
-                '${_targetLabel(r.targetType)} · ${r.createdAt.toLocal()}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: Text(
-                _statusLabel(r.status),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              onTap: () {
-                // 신고한 대상 화면으로 이동
-                if (r.targetPostId != null && r.targetPostId!.isNotEmpty) {
-                  // 게시글 또는 댓글 신고 → 해당 게시글 상세로 이동
-                  context.push('/posts/${r.targetPostId}');
-                  return;
-                }
-                if (r.targetChatRoomId != null && r.targetChatRoomId!.isNotEmpty) {
-                  // 채팅 신고 → 채팅방으로 이동
-                  context.push('/chat/${r.targetChatRoomId}');
-                  return;
-                }
-                if (r.targetUserId != null && r.targetUserId!.isNotEmpty) {
-                  // 사용자 신고는 아직 전용 프로필 화면이 없어, 안내만 표시
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('사용자 프로필 화면은 추후 제공될 예정입니다.')),
-                  );
-                  return;
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('이 신고 유형은 아직 바로 이동을 지원하지 않습니다.')),
-                );
-              },
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(child: Text('신고 내역을 불러오지 못했습니다.\n$_error', textAlign: TextAlign.center));
+    }
+    final reports = _reports!;
+    if (reports.isEmpty) return const Center(child: Text('신고한 내역이 없습니다.'));
+    return ListView.separated(
+      itemCount: reports.length,
+      separatorBuilder: (_, __) => const Divider(height: 0),
+      itemBuilder: (context, i) {
+        final r = reports[i];
+        return ListTile(
+          leading: Icon(
+            r.targetType == 'post' ? Icons.forum
+                : r.targetType == 'comment' ? Icons.chat_bubble_outline
+                : Icons.report,
+          ),
+          title: Text(r.reason ?? '(사유 없음)', maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text('${_targetLabel(r.targetType)} · ${r.createdAt.toLocal()}', maxLines: 2, overflow: TextOverflow.ellipsis),
+          trailing: Text(_statusLabel(r.status), style: Theme.of(context).textTheme.bodySmall),
+          onTap: () {
+            if (r.targetPostId != null && r.targetPostId!.isNotEmpty) {
+              context.push('/posts/${r.targetPostId}');
+              return;
+            }
+            if (r.targetChatRoomId != null && r.targetChatRoomId!.isNotEmpty) {
+              context.push('/chat/${r.targetChatRoomId}');
+              return;
+            }
+            if (r.targetUserId != null && r.targetUserId!.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('사용자 프로필 화면은 추후 제공될 예정입니다.')),
+              );
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('이 신고 유형은 아직 바로 이동을 지원하지 않습니다.')),
             );
           },
         );

@@ -138,7 +138,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final repo = context.read<CommunityRepository>();
       await repo.deletePost(widget.postId);
       if (!mounted) return;
-      context.go('/feed');
+      context.go('/');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('게시글이 삭제되었습니다.')),
       );
@@ -156,17 +156,32 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
+  Widget? _buildBackLeading(BuildContext context) {
+    if (Navigator.of(context).canPop()) return null;
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => context.go('/'),
+      tooltip: '뒤로',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('게시글')),
+        appBar: AppBar(
+          title: const Text('게시글'),
+          leading: _buildBackLeading(context),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (_post == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('게시글')),
+        appBar: AppBar(
+          title: const Text('게시글'),
+          leading: _buildBackLeading(context),
+        ),
         body: const Center(child: Text('게시글을 찾을 수 없습니다.')),
       );
     }
@@ -176,6 +191,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('게시글'),
+        leading: _buildBackLeading(context),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -248,6 +264,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               width: 120,
                               height: 120,
                               fit: BoxFit.cover,
+                              cacheWidth: 240,
+                              cacheHeight: 240,
                               errorBuilder: (_, __, ___) => Container(
                                 width: 120,
                                 height: 120,
@@ -395,37 +413,84 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _showReportDialog(BuildContext context, {required String targetType, required String targetId}) async {
-    final reason = await showDialog<String>(
+    final result = await showDialog<Map<String, String?>>(
       context: context,
       builder: (ctx) {
-        final ctrl = TextEditingController();
-        return AlertDialog(
-          title: const Text('신고하기'),
-          content: TextField(
-            controller: ctrl,
-            decoration: const InputDecoration(
-              hintText: '신고 사유 (선택)',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 2,
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('신고'),
-            ),
-          ],
+        final detailCtrl = TextEditingController();
+        String selectedReason = '스팸/홍보';
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('신고하기'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('신고 사유를 선택하세요.'),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      title: const Text('스팸/홍보'),
+                      value: '스팸/홍보',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('욕설/비방'),
+                      value: '욕설/비방',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('부적절한 내용'),
+                      value: '부적절한 내용',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('기타'),
+                      value: '기타',
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v ?? selectedReason),
+                    ),
+                    if (selectedReason == '기타') ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: detailCtrl,
+                        decoration: const InputDecoration(
+                          hintText: '기타 사유를 입력하세요 (선택)',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, {
+                    'reason': selectedReason,
+                    'detail': selectedReason == '기타' ? detailCtrl.text.trim() : null,
+                  }),
+                  child: const Text('신고'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
-    if (reason == null || !context.mounted) return;
+    if (result == null || !context.mounted) return;
+    final reason = result['reason'];
+    final detail = result['detail'];
     try {
       final repo = context.read<ReportsRepository>();
       if (targetType == 'post') {
-        await repo.reportPost(targetId, reason: reason);
+        await repo.reportPost(targetId, reason: reason, detail: detail);
       } else {
-        await repo.reportComment(targetId, reason: reason);
+        await repo.reportComment(targetId, reason: reason, detail: detail);
       }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('신고가 접수되었습니다.')));

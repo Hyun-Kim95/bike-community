@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { TradeChatRoom } from './entities/trade-chat-room.entity';
 import { TradeMessage } from './entities/trade-message.entity';
 import { MarketplaceItem } from './entities/marketplace-item.entity';
@@ -30,6 +30,9 @@ export class ChatService {
       relations: ['seller'],
     });
     if (!item) throw new NotFoundException('상품을 찾을 수 없습니다.');
+    if (item.saleStatus === 'sold') {
+      throw new ForbiddenException('이미 거래가 완료된 상품입니다.');
+    }
     if (item.sellerId === userId) {
       throw new ForbiddenException('본인 상품에는 채팅할 수 없습니다. 채팅 목록에서 대화를 이어가세요.');
     }
@@ -46,14 +49,22 @@ export class ChatService {
     return this.roomRepo.save(room);
   }
 
-  async getMyRooms(userId: string): Promise<TradeChatRoom[]> {
+  async getMyRooms(userId: string): Promise<any[]> {
     const rooms = await this.roomRepo.find({
       where: [{ buyerId: userId }, { sellerId: userId }],
       relations: ['item', 'buyer', 'seller'],
       order: { updatedAt: 'DESC' },
       take: 50,
     });
-    return rooms;
+    const enriched = await Promise.all(
+      rooms.map(async (room) => {
+        const unreadCount = await this.messageRepo.count({
+          where: { roomId: room.id, senderId: Not(userId), read: false },
+        });
+        return { ...room, unreadCount };
+      }),
+    );
+    return enriched;
   }
 
   async getRoom(roomId: string, userId: string): Promise<TradeChatRoom> {
@@ -77,6 +88,11 @@ export class ChatService {
       skip: (page - 1) * limit,
       take: limit,
     });
+    // 내가 아닌 사람이 보낸 읽지 않은 메시지를 모두 읽음 처리
+    await this.messageRepo.update(
+      { roomId, senderId: Not(userId), read: false },
+      { read: true },
+    );
     return {
       items,
       total,
@@ -98,6 +114,12 @@ export class ChatService {
       imageUrl: dto.imageUrl ?? null,
     });
     const saved = await this.messageRepo.save(message);
+    // 내가 보낸 시점에, 상대방이 보낸 읽지 않은 메시지는 모두 읽은 것으로 처리
+    await this.messageRepo.update(
+      { roomId, senderId: Not(userId), read: false },
+      { read: true },
+    );
+
     room.updatedAt = new Date();
     await this.roomRepo.save(room);
     const recipientId = room.buyerId === userId ? room.sellerId : room.buyerId;

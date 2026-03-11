@@ -7,6 +7,7 @@ export enum ReportTargetType {
   COMMENT = 'comment',
   CHAT = 'chat',
   USER = 'user',
+  REVIEW = 'review',
 }
 
 export enum ReportStatus {
