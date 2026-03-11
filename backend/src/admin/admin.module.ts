@@ -10,6 +10,7 @@ import { UserProfile } from '../users/entities/user-profile.entity';
 import { Post } from '../posts/entities/post.entity';
 import { Comment } from '../posts/entities/comment.entity';
 import { MarketplaceItem } from '../marketplace/entities/marketplace-item.entity';
+import { Review } from '../marketplace/entities/review.entity';
 import { Report } from '../reports/entities/report.entity';
 import { Notice } from '../notices/entities/notice.entity';
 import { PointHistory } from '../points/entities/point-history.entity';
@@ -25,6 +26,7 @@ import { AdminNoticesController } from './admin-notices.controller';
 import { AdminGradesController } from './admin-grades.controller';
 import { AdminPointsController } from './admin-points.controller';
 import { AdminActivityLogsController } from './admin-activity-logs.controller';
+import { AdminMarketplaceController } from './admin-marketplace.controller';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 
 @Module({
@@ -37,6 +39,7 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
       Post,
       Comment,
       MarketplaceItem,
+      Review,
       Report,
       Notice,
       PointHistory,
@@ -61,6 +64,7 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
     AdminNoticesController,
     AdminGradesController,
     AdminPointsController,
+    AdminMarketplaceController,
     AdminActivityLogsController,
   ],
   providers: [AdminAuthService, AdminJwtStrategy, AdminStatsService],

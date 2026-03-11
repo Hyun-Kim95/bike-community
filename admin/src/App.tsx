@@ -9,6 +9,7 @@ import { Notices } from './pages/Notices'
 import { Posts } from './pages/Posts'
 import { Grades } from './pages/Grades'
 import { Points } from './pages/Points'
+import { Trades } from './pages/Trades'
 import { ActivityLogs } from './pages/ActivityLogs'
 
 function App() {
@@ -61,6 +62,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Posts />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trades"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Trades />
             </Layout>
           </ProtectedRoute>
         }

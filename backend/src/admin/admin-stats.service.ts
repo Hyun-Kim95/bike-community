@@ -26,8 +26,18 @@ export class AdminStatsService {
   ) {}
 
   async getDashboard() {
+    // 한국 시간(Asia/Seoul, UTC+9) 기준으로 "오늘 0시"를 계산
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const localOffsetMs = now.getTimezoneOffset() * 60 * 1000; // 분 → ms (UTC = now + offset)
+    const utcNowMs = now.getTime() + localOffsetMs;
+    const kstOffsetMs = 9 * 60 * 60 * 1000;
+    const kstNow = new Date(utcNowMs + kstOffsetMs);
+    const kstYear = kstNow.getFullYear();
+    const kstMonth = kstNow.getMonth();
+    const kstDate = kstNow.getDate();
+    // KST 자정 시각을 UTC 기준 ms로 환산한 뒤 Date 객체 생성
+    const kstMidnightLocal = new Date(kstYear, kstMonth, kstDate, 0, 0, 0, 0);
+    const todayStart = new Date(kstMidnightLocal.getTime() - localOffsetMs);
     const weekStart = new Date(todayStart);
     // 최근 7일 (오늘 포함)
     weekStart.setDate(weekStart.getDate() - 6);

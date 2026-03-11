@@ -48,6 +48,12 @@ export function Layout({ children }: LayoutProps) {
             게시글 관리
           </Link>
           <Link
+            to="/trades"
+            className="block py-2 px-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          >
+            거래 관리
+          </Link>
+          <Link
             to="/notices"
             className="block py-2 px-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           >

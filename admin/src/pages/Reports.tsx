@@ -35,6 +35,7 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
   post: '게시글',
   comment: '댓글',
   marketplace_item: '거래글',
+  review: '후기',
 }
 function targetTypeLabel(value: string): string {
   return TARGET_TYPE_LABELS[value] ?? value
