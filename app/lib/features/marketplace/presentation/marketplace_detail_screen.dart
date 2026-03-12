@@ -78,6 +78,110 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
     } catch (_) {}
   }
 
+  Future<void> _updateSaleStatus(String status, String successMessage, {String? reservedPartnerId}) async {
+    if (_item == null) return;
+    try {
+      final repo = context.read<MarketplaceRepository>();
+      final updated = await repo.updateItem(
+        id: _item!.id,
+        saleStatus: status,
+        reservedPartnerId: reservedPartnerId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _item = updated;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(successMessage)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('상태 변경에 실패했습니다: $e')),
+      );
+    }
+  }
+
+  Future<void> _markAsReserved() async {
+    if (_item == null) return;
+    final auth = context.read<AuthProvider>();
+    final myId = auth.user?.id ?? '';
+
+    // 채팅했던 사람 후보 (buyer 쪽)
+    final candidates = <String, String>{};
+    try {
+      final chatRepo = context.read<ChatRepository>();
+      final rooms = await chatRepo.getMyRooms();
+      for (final room in rooms.where((r) => r.itemId == _item!.id)) {
+        final other =
+            room.buyerId == myId ? room.seller : room.buyer; // 내가 판매자일 때 buyer, 아니면 seller
+        if (other != null) {
+          candidates[other.id] = other.nickname;
+        }
+      }
+    } catch (_) {
+      // 채팅 목록 로딩 실패는 무시하고 넘어감
+    }
+
+    if (candidates.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('해당 상품과 채팅한 사람이 없어서 예약중으로 변경할 수 없습니다.')),
+      );
+      return;
+    }
+
+    String? selectedUserId = candidates.keys.first;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('예약중으로 변경'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('예약 상대를 선택하세요.'),
+                const SizedBox(height: 8),
+                ...candidates.entries.map(
+                  (e) => RadioListTile<String>(
+                    title: Text(e.value),
+                    value: e.key,
+                    groupValue: selectedUserId,
+                    onChanged: (v) => setState(() => selectedUserId = v),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: selectedUserId == null ? null : () => Navigator.of(ctx).pop(true),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted || selectedUserId == null) return;
+    await _updateSaleStatus(
+      'reserved',
+      '상품이 예약중 상태로 변경되었습니다.',
+      reservedPartnerId: selectedUserId,
+    );
+  }
+
+  Future<void> _markAsOnSale() async {
+    await _updateSaleStatus('on_sale', '상품이 판매중 상태로 변경되었습니다.');
+  }
+
   Future<void> _deleteItem() async {
     if (_item == null) return;
     final confirmed = await showDialog<bool>(
@@ -260,39 +364,54 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen> {
           title: const Text('상품 상세'),
           leading: _buildBackLeading(context),
           actions: [
-          if (isSeller)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (v) async {
-                if (v == 'edit') {
-                  if (!mounted) return;
-                  context.push('/marketplace/${item.id}/edit');
-                } else if (v == 'delete') {
-                  await _deleteItem();
-                } else if (v == 'mark_sold') {
-                  await _markAsSold();
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'edit', child: Text('수정')),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('삭제', style: TextStyle(color: Colors.red)),
-                ),
-                if (item.saleStatus != 'sold')
+            if (isSeller)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (v) async {
+                  if (v == 'edit') {
+                    if (!mounted) return;
+                    context.push('/marketplace/${item.id}/edit');
+                  } else if (v == 'delete') {
+                    await _deleteItem();
+                  } else if (v == 'mark_sold') {
+                    await _markAsSold();
+                  } else if (v == 'mark_reserved') {
+                    await _markAsReserved();
+                  } else if (v == 'mark_on_sale') {
+                    await _markAsOnSale();
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('수정')),
                   const PopupMenuItem(
-                    value: 'mark_sold',
-                    child: Text('거래완료로 변경'),
+                    value: 'delete',
+                    child: Text('삭제', style: TextStyle(color: Colors.red)),
                   ),
-              ],
+                  if (item.saleStatus != 'sold') ...[
+                    const PopupMenuItem(
+                      value: 'mark_sold',
+                      child: Text('거래완료로 변경'),
+                    ),
+                    if (item.saleStatus == 'on_sale')
+                      const PopupMenuItem(
+                        value: 'mark_reserved',
+                        child: Text('예약중으로 변경'),
+                      )
+                    else if (item.saleStatus == 'reserved')
+                      const PopupMenuItem(
+                        value: 'mark_on_sale',
+                        child: Text('판매중으로 변경'),
+                      ),
+                  ],
+                ],
+              ),
+            IconButton(
+              icon: Icon(_wished ? Icons.favorite : Icons.favorite_border),
+              color: _wished ? Colors.red : null,
+              onPressed: _toggleWish,
             ),
-          IconButton(
-            icon: Icon(_wished ? Icons.favorite : Icons.favorite_border),
-            color: _wished ? Colors.red : null,
-            onPressed: _toggleWish,
-          ),
-        ],
-      ),
+          ],
+        ),
       body: Column(
         children: [
           Expanded(

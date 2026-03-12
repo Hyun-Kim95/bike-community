@@ -48,6 +48,7 @@ export class AdminMarketplaceController {
         'item.wishCount',
         'item.createdAt',
         'item.updatedAt',
+        'item.reservedPartnerId',
         'seller.id',
         'seller.email',
         'seller.nickname',
@@ -78,24 +79,37 @@ export class AdminMarketplaceController {
         let statusChangedAt: Date | null = null;
 
         if (item.saleStatus === SaleStatus.RESERVED || item.saleStatus === SaleStatus.SOLD) {
-          const review = await this.reviewRepo.findOne({
-            where: { itemId: item.id },
-            relations: ['reviewer', 'reviewee'],
-            order: { createdAt: 'DESC' },
-          });
-          if (review) {
-            const isReviewerSeller = review.reviewerId === item.sellerId;
-            const otherUser = isReviewerSeller ? review.reviewee : review.reviewer;
-            if (otherUser) {
+          const reservedPartnerId = (item as any).reservedPartnerId as string | undefined;
+          if (reservedPartnerId) {
+            const user = await this.userRepo.findOne({ where: { id: reservedPartnerId } });
+            if (user) {
               tradePartner = {
-                id: otherUser.id,
-                email: otherUser.email,
-                nickname: otherUser.nickname,
+                id: user.id,
+                email: user.email,
+                nickname: user.nickname,
               };
             }
-            statusChangedAt = review.createdAt;
-          } else {
             statusChangedAt = item.updatedAt;
+          } else {
+            const review = await this.reviewRepo.findOne({
+              where: { itemId: item.id },
+              relations: ['reviewer', 'reviewee'],
+              order: { createdAt: 'DESC' },
+            });
+            if (review) {
+              const isReviewerSeller = review.reviewerId === item.sellerId;
+              const otherUser = isReviewerSeller ? review.reviewee : review.reviewer;
+              if (otherUser) {
+                tradePartner = {
+                  id: otherUser.id,
+                  email: otherUser.email,
+                  nickname: otherUser.nickname,
+                };
+              }
+              statusChangedAt = review.createdAt;
+            } else {
+              statusChangedAt = item.updatedAt;
+            }
           }
         }
 

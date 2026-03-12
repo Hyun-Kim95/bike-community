@@ -36,4 +36,8 @@ export class UpdateMarketplaceItemDto {
   @IsOptional()
   @IsEnum(SaleStatus)
   saleStatus?: SaleStatus;
+
+  @IsOptional()
+  @IsString()
+  reservedPartnerId?: string;
 }

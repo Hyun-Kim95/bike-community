@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MarketplaceItem, SaleStatus } from './entities/marketplace-item.entity';
+import { TradeChatRoom } from './entities/trade-chat-room.entity';
 import { Wish } from './entities/wish.entity';
 import { CreateMarketplaceItemDto } from './dto/create-marketplace-item.dto';
 import { UpdateMarketplaceItemDto } from './dto/update-marketplace-item.dto';
@@ -18,6 +19,8 @@ export class MarketplaceService {
     private readonly itemRepo: Repository<MarketplaceItem>,
     @InjectRepository(Wish)
     private readonly wishRepo: Repository<Wish>,
+    @InjectRepository(TradeChatRoom)
+    private readonly roomRepo: Repository<TradeChatRoom>,
   ) {}
 
   async create(sellerId: string, dto: CreateMarketplaceItemDto): Promise<MarketplaceItem> {
@@ -107,7 +110,25 @@ export class MarketplaceService {
     if (dto.description !== undefined) item.description = dto.description;
     if (dto.imageUrls !== undefined) item.imageUrls = dto.imageUrls;
     if (dto.region !== undefined) item.region = dto.region;
-    if (dto.saleStatus !== undefined) item.saleStatus = dto.saleStatus;
+    if (dto.saleStatus !== undefined) {
+      // 예약중으로 변경하려는 경우, 해당 상품에 대한 채팅방과 예약 상대를 검증
+      if (dto.saleStatus === SaleStatus.RESERVED) {
+        if (!dto.reservedPartnerId) {
+          throw new ForbiddenException('예약중으로 변경하려면 예약 상대를 선택해야 합니다.');
+        }
+        const hasChatWithPartner = await this.roomRepo.count({
+          where: { itemId: id, buyerId: dto.reservedPartnerId },
+        });
+        if (!hasChatWithPartner) {
+          throw new ForbiddenException('해당 상품과 채팅한 사람만 예약 상대로 지정할 수 있습니다.');
+        }
+        item.reservedPartnerId = dto.reservedPartnerId;
+      } else if (dto.saleStatus === SaleStatus.ON_SALE) {
+        // 다시 판매중으로 되돌릴 때는 예약 상대를 비운다
+        item.reservedPartnerId = null;
+      }
+      item.saleStatus = dto.saleStatus;
+    }
     return this.itemRepo.save(item);
   }
 

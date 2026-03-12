@@ -67,6 +67,7 @@ class MarketplaceRepository {
     List<String>? imageUrls,
     String? region,
     String? saleStatus,
+    String? reservedPartnerId,
   }) async {
     final data = <String, dynamic>{};
     if (title != null) data['title'] = title;
@@ -76,6 +77,7 @@ class MarketplaceRepository {
     if (imageUrls != null) data['imageUrls'] = imageUrls;
     if (region != null) data['region'] = region;
     if (saleStatus != null) data['saleStatus'] = saleStatus;
+     if (reservedPartnerId != null) data['reservedPartnerId'] = reservedPartnerId;
     final res = await _api.patch<Map<String, dynamic>>('/marketplace/items/$id', data: data);
     return MarketplaceItem.fromJson(res.data ?? {});
   }

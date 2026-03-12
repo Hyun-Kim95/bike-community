@@ -54,4 +54,11 @@ export class MarketplaceItem extends BaseEntity {
 
   @Column({ type: 'int', default: 0 })
   wishCount: number;
+
+  @Column({ type: 'uuid', nullable: true })
+  reservedPartnerId: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'reservedPartnerId' })
+  reservedPartner?: User | null;
 }

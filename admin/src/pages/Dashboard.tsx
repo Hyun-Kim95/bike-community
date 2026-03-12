@@ -38,15 +38,32 @@ export function Dashboard() {
     const week = Number.parseInt(weekStr, 10)
     if (!Number.isFinite(year) || !Number.isFinite(week)) return isoWeek
 
-    // ISO 주차를 대략적인 해당 주의 월/주차로 변환
-    const approx = new Date(year, 0, 1 + (week - 1) * 7)
-    const day = approx.getDay() || 7 // 일요일(0)을 7로 보정
-    const monday = new Date(approx)
-    monday.setDate(approx.getDate() + (1 - day))
+    // ISO 주차 → 해당 주의 월/주차를 한국 시간 기준으로 계산
+    // 1) 해당 ISO 주의 월요일(UTC 기준)을 구한다.
+    const jan4 = new Date(Date.UTC(year, 0, 4))
+    const jan4Day = jan4.getUTCDay() || 7 // 일요일을 7로
+    const week1Monday = new Date(jan4)
+    week1Monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1)
 
-    const month = monday.getMonth() + 1
-    const date = monday.getDate()
-    const weekOfMonth = Math.floor((date - 1) / 7) + 1
+    const mondayUtc = new Date(week1Monday)
+    mondayUtc.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7)
+
+    // 2) 한국 시간(KST, UTC+9)으로 변환
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000
+    const mondayKst = new Date(mondayUtc.getTime() + KST_OFFSET_MS)
+
+    // 3) 주의 마지막 날(일요일)을 기준으로 월을 결정
+    //    → 대부분의 날짜가 포함된 "끝나는 달" 기준으로 표시
+    const sundayKst = new Date(mondayKst)
+    sundayKst.setDate(mondayKst.getDate() + 6)
+
+    const month = sundayKst.getMonth() + 1
+
+    // 4) 해당 월에서 몇 주차인지 계산 (월요일 시작 주차)
+    const firstOfMonth = new Date(sundayKst.getFullYear(), sundayKst.getMonth(), 1)
+    const firstDay = (firstOfMonth.getDay() + 6) % 7 // 월요일=0
+    const dayOfMonth = sundayKst.getDate()
+    const weekOfMonth = Math.floor((firstDay + dayOfMonth - 1) / 7) + 1
 
     return `${month.toString().padStart(2, '0')}월 ${weekOfMonth}주차`
   }
